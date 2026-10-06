@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetStatus;
 use App\Enums\AssetType;
+use App\Enums\ComponentStatus;
 use App\Models\Asset;
 use App\Models\AssetAssignment;
+use App\Models\Component;
 use App\Models\Department;
 use App\Models\Employee;
 use Illuminate\Contracts\View\View;
@@ -34,6 +36,14 @@ class DashboardController extends Controller
             ->where('status', $status)
             ->sum('total');
 
+        // Komponen: satu query agregat per status.
+        $componentsByStatus = Component::query()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $countComponent = fn (ComponentStatus $status) => (int) ($componentsByStatus[$status->value] ?? 0);
+
         $stats = [
             'total_pc' => $count(AssetType::PC),
             'total_laptop' => $count(AssetType::Laptop),
@@ -42,6 +52,9 @@ class DashboardController extends Controller
             'in_repair' => $countStatus(AssetStatus::InRepair),
             'retired' => $countStatus(AssetStatus::Retired),
             'total_assets' => (int) $byTypeAndStatus->sum('total'),
+            'total_components' => (int) $componentsByStatus->sum(),
+            'components_in_stock' => $countComponent(ComponentStatus::InStock),
+            'components_installed' => $countComponent(ComponentStatus::Installed),
             'total_employees' => Employee::count(),
             'total_departments' => Department::count(),
         ];

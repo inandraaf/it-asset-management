@@ -10,11 +10,11 @@
 | `hostname` | string(63) | Tidak | Nama komputer di jaringan/Windows. Unik antar aset aktif, disimpan lowercase |
 | `mac_address` | string(17) | Ya | **Unik global**, format `AA:BB:CC:DD:EE:FF` |
 | `ip_address` | string(45) | Tidak | **Unik jika diisi**, IPv4/IPv6 valid |
-| `specs` | object | Ya (minimal `cpu`) | 12 komponen — lihat [03-database.md](03-database.md) |
+| `specs` | object | Tidak | **Fase 2:** hanya `os` (opsional). Part fisik dikelola di modul komponen |
 | `status` | enum | Ya | Default `Available` |
 | `created_by` | bigint | auto | Diisi dari `auth()->id()` |
 
-Komponen yang dilacak di dalam `specs`: `cpu`, `ram`, `storage`, `storage_2`, `gpu`, `motherboard`, `psu`, `casing`, `os`, `monitor`, `keyboard`, `mouse`. Hanya `cpu` yang wajib; sisanya opsional dan kosong tidak disimpan.
+**Fase 2:** part fisik (cpu, ram, storage, gpu, motherboard, psu, casing, monitor, keyboard, mouse) tidak lagi di `specs` — dikelola sebagai komponen tersendiri di [14-manajemen-komponen.md](14-manajemen-komponen.md). `specs` hanya menyimpan `os`.
 
 Detail aturan validasi lengkap ada di [10-validasi.md](10-validasi.md).
 
@@ -244,25 +244,31 @@ class Asset extends Model
 
 ## 11. Keputusan: Bagaimana Part Komputer Dicatat?
 
-Pertanyaan yang wajar: **apakah RAM, GPU, dan komponen lain juga "aset"?** Ada dua model, dan pilihannya menentukan kompleksitas sistem.
+> **STATUS: DIREVISI.** Keputusan awal memakai **Model A** (komponen sebagai field di
+> `assets.specs`). Setelah kebutuhan pelacakan perpindahan part muncul, keputusan berubah ke
+> **Model B** (komponen sebagai aset tersendiri). Desain lengkapnya ada di
+> **[14-manajemen-komponen.md](14-manajemen-komponen.md)**. Bagian di bawah disimpan sebagai
+> catatan sejarah keputusan.
 
-| Model | Cara kerja | Cocok bila |
+Pertanyaan yang wajar: **apakah RAM, GPU, dan komponen lain juga "aset"?**
+
+| Model | Cara kerja | Menjawab |
 | --- | --- | --- |
-| **A. Komponen sebagai field** (dipakai sekarang) | Tiap komponen jadi key di dalam `assets.specs` (jsonb) | Ingin tahu **isi** tiap PC dan bisa mencari "PC mana yang RAM 8GB?" |
-| **B. Komponen sebagai aset** | Komponen jadi baris di `assets` dengan `parent_id` ke PC | Perlu melacak **perpindahan komponen antarmesin** ("RAM ini dulu di PC A") |
+| **A. Komponen sebagai field** (awalnya dipakai) | Komponen jadi key di `assets.specs` | "PC ini isinya apa?" |
+| **B. Komponen sebagai aset** (**dipakai sekarang**) | Komponen jadi baris tersendiri di tabel `components`, dipasang ke host lewat `component_installations` | "Keping RAM ini sekarang di mana, sebelumnya di mana saja?" |
 
-### Alasan memilih Model A
+### Alasan beralih ke Model B
 
-1. **Sesuai ruang lingkup.** [PRD §4](01-overview.md) menyatakan sistem belum mencakup pencatatan aksesori/consumables. Model B akan memperluas sistem menjadi manajemen inventaris komponen — di luar lingkup MVP.
-2. **Kompleksitas jauh lebih rendah.** Model B menuntut label/barcode per komponen, riwayat pemasangan/pelepasan, validasi kompatibilitas (DDR4 vs DDR5, SATA vs NVMe), dan 1 PC menjadi 5–8 baris data.
-3. **Kebutuhan nyata biasanya cukup di model A.** Pertanyaan operasional yang sering muncul adalah "PC ini isinya apa" dan "siapa yang memegang" — keduanya terjawab.
+1. **Kebutuhan pelacakan perpindahan.** Model A tidak bisa menjawab di mana sebuah keping
+   komponen berada dan ke mana saja ia pernah dipindah.
+2. **Komponen punya identitas sendiri** (nomor seri, kapasitas) yang perlu dicatat per unit.
+3. **Riwayat pemasangan** dibutuhkan untuk audit dan kanibalisasi PC rusak.
 
-### Jalur migrasi ke Model B (bila nanti dibutuhkan)
+### Yang berubah pada modul aset
 
-Model A **tidak menghalangi** perpindahan ke Model B:
+- `assets.specs` disederhanakan menjadi **hanya `os`** (perangkat lunak, bukan benda fisik) — **sudah diterapkan**.
+- Part fisik dikelola di modul komponen.
+- **Ringkasan perangkat keras** PC dihitung otomatis dari komponen terpasang.
 
-1. Tambah kolom `parent_id` (self-FK, nullable) dan `component_type` pada `assets`.
-2. Migrasikan data: untuk setiap key di `specs`, buat baris `assets` baru dengan `parent_id` = PC induk dan `component_type` = key tersebut.
-3. Isi `specs` lama tetap disimpan sebagai cadangan sampai migrasi terverifikasi.
-
-Menambah komponen baru di Model A cukup menambah entri di `Asset::SPEC_KEYS` dan `Asset::specLabels()` — **tanpa migrasi**, karena `specs` bertipe `jsonb`.
+> Ruang lingkup PRD diperluas: pencatatan komponen kini **termasuk**. Lihat
+> [01-overview.md](01-overview.md) §4 dan [14-manajemen-komponen.md](14-manajemen-komponen.md).

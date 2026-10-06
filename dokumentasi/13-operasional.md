@@ -87,11 +87,13 @@ Dibuat oleh `UserSeeder`. Password diambil dari `SEED_ADMIN_PASSWORD` (lihat [04
 | `DepartmentSeeder` | 5 departemen: EDP, HRGA, EP, RnD, CC |
 | `UserSeeder` | Akun admin & viewer (lihat §3) |
 | `EmployeeSeeder` | **15 karyawan** tersebar di 5 departemen (NIP 2021xxxx–2025xxxx) |
-| `AssetSeeder` | **16 aset** (10 PC + 6 laptop) dengan spesifikasi lengkap, hostname, dan penugasan |
+| `AssetSeeder` | **16 aset** (10 PC + 6 laptop) dengan hostname, OS, dan penugasan |
+| `ComponentSeeder` | **24 komponen** (RAM, disk, GPU, monitor, dst.) + **21 pemasangan** contoh ke host |
 
 ### Isi `AssetSeeder`
 
-- **Komponen lengkap**: CPU, RAM, storage (+storage kedua), GPU, motherboard, PSU, casing, OS, monitor, keyboard, mouse.
+- **Komponen** dikelola sebagai aset tersendiri (tabel `components`); lihat [14-manajemen-komponen.md](14-manajemen-komponen.md).
+- **OS** disimpan di `assets.specs`; part fisik dipasang ke host lewat `component_installations`.
 - **Hostname** mengikuti pola per departemen, contoh `pc-rnd-01`, `lt-edp-01`.
 - **Status bervariasi**: 10 terpakai, 3 menganggur, 2 in repair, 1 retired.
 - **Riwayat transfer**: `pc-edp-01` sengaja punya riwayat dua baris (Siti Aminah → Budi Santoso) agar halaman riwayat aset tidak kosong saat didemokan.

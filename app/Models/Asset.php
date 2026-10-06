@@ -18,32 +18,28 @@ class Asset extends Model
     use SoftDeletes;
 
     /**
-     * Key spesifikasi yang dikenal sistem, urut sesuai tampilan form.
+     * Kolom kode yang dipakai CodeGenerator.
+     */
+    public const CODE_COLUMN = 'asset_code';
+
+    /**
+     * Key spesifikasi yang dikenal sistem (Fase 2).
      *
-     * Disimpan di dalam kolom jsonb `specs`, bukan kolom terpisah, sehingga
-     * menambah komponen baru cukup menambah entri di sini tanpa migrasi.
+     * Setelah part fisik pindah ke tabel `components`, `specs` hanya menyimpan
+     * atribut non-fisik: **sistem operasi**. Part dikelola lewat modul komponen.
      *
-     * @see dokumentasi/06-manajemen-aset.md §1
+     * @see dokumentasi/14-manajemen-komponen.md §9
      */
     public const SPEC_KEYS = [
-        'cpu',
-        'ram',
-        'storage',
-        'storage_2',
-        'gpu',
-        'motherboard',
-        'psu',
-        'casing',
         'os',
-        'monitor',
-        'keyboard',
-        'mouse',
     ];
 
     /**
      * Spesifikasi yang wajib diisi minimal.
+     *
+     * OS tidak wajib: admin boleh mengisi belakangan.
      */
-    public const REQUIRED_SPEC_KEYS = ['cpu'];
+    public const REQUIRED_SPEC_KEYS = [];
 
     protected $fillable = [
         'asset_code',
@@ -62,6 +58,12 @@ class Asset extends Model
         'type' => AssetType::class,
         'status' => AssetStatus::class,
     ];
+
+    /**
+     * Ringkasan perangkat keras yang dipasok pemanggil (bukan kolom DB).
+     * Dipakai agar daftar aset tidak menembak query per baris.
+     */
+    private ?string $componentSummaryOverride = null;
 
     /**
      * Seluruh riwayat alokasi, terbaru di atas.
@@ -84,6 +86,22 @@ class Asset extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Seluruh riwayat pemasangan komponen pada host ini.
+     */
+    public function componentInstallations(): HasMany
+    {
+        return $this->hasMany(ComponentInstallation::class)->orderByDesc('installed_date');
+    }
+
+    /**
+     * Komponen yang masih terpasang saat ini.
+     */
+    public function activeComponentInstallations(): HasMany
+    {
+        return $this->hasMany(ComponentInstallation::class)->whereNull('removed_date');
+    }
+
     public function scopeAvailable(Builder $query): Builder
     {
         return $query->where('status', AssetStatus::Available);
@@ -95,25 +113,14 @@ class Asset extends Model
     }
 
     /**
-     * Label manusiawi untuk tiap key spesifikasi.
+     * Label manusiawi untuk tiap key spesifikasi host.
      *
      * @return array<string, string>
      */
     public static function specLabels(): array
     {
         return [
-            'cpu' => 'CPU',
-            'ram' => 'RAM',
-            'storage' => 'Storage 1',
-            'storage_2' => 'Storage 2',
-            'gpu' => 'GPU',
-            'motherboard' => 'Motherboard',
-            'psu' => 'Power Supply',
-            'casing' => 'Casing',
             'os' => 'Sistem Operasi',
-            'monitor' => 'Monitor',
-            'keyboard' => 'Keyboard',
-            'mouse' => 'Mouse',
         ];
     }
 
@@ -141,7 +148,8 @@ class Asset extends Model
     }
 
     /**
-     * Ringkasan singkat untuk kolom tabel (CPU · RAM · Storage).
+     * Ringkasan singkat dari `specs` (Fase 1). Setelah Fase 2, view memakai
+     * `hardwareSummary()` yang dihitung dari komponen terpasang.
      */
     public function specSummary(int $limit = 3): string
     {
@@ -153,6 +161,52 @@ class Asset extends Model
     }
 
     /**
+     * Ringkasan singkat perangkat keras untuk kolom tabel.
+     *
+     * Fase 2: dihitung dari **komponen terpasang**, bukan dari `specs`.
+     * Memerlukan relasi `activeComponentInstallations.component` sudah dimuat.
+     */
+    public function hardwareSummary(int $limit = 3): string
+    {
+        if ($this->hasComponentSummaryOverride()) {
+            return $this->componentSummaryOverride;
+        }
+
+        $values = $this->activeComponentInstallations
+            ->map(fn (ComponentInstallation $i) => $i->component?->fullName())
+            ->filter()
+            ->values();
+
+        return $values->isEmpty()
+            ? '—'
+            : $values->take($limit)->implode(' · ');
+    }
+
+    /**
+     * Slot ringkasan yang sudah disiapkan pemanggil (mis. dari eager load),
+     * agar tabel daftar tidak menembak query per baris.
+     */
+    public function setComponentSummaryOverride(?string $summary): static
+    {
+        $this->componentSummaryOverride = $summary;
+
+        return $this;
+    }
+
+    private function hasComponentSummaryOverride(): bool
+    {
+        return $this->componentSummaryOverride !== null;
+    }
+
+    /**
+     * Ringkasan sistem operasi (satu-satunya sisa `specs` setelah Fase 2).
+     */
+    public function osLabel(): string
+    {
+        return $this->specs['os'] ?? '—';
+    }
+
+    /**
      * Apakah aset boleh di-assign ke karyawan.
      *
      * @see dokumentasi/07-alokasi-aset.md R1
@@ -160,5 +214,15 @@ class Asset extends Model
     public function isAssignable(): bool
     {
         return $this->status->isAssignable() && ! $this->activeAssignment()->exists();
+    }
+
+    /**
+     * Apakah host masih punya komponen terpasang.
+     *
+     * @see dokumentasi/14-manajemen-komponen.md K9
+     */
+    public function hasInstalledComponents(): bool
+    {
+        return $this->activeComponentInstallations()->exists();
     }
 }

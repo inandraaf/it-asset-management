@@ -84,6 +84,11 @@ Antarmuka memakai **layout sidebar admin** yang rapi dan sederhana:
 | `asset_assignments` | `asset_id` WHERE `returned_date IS NULL` | UNIQUE PARTIAL | Satu assignment aktif per aset |
 | `asset_assignments` | `(employee_id, returned_date)` | COMPOSITE | Hitung aset aktif per karyawan/departemen (dashboard) |
 | `asset_assignments` | `(assigned_date, id)` | COMPOSITE | Daftar "alokasi terbaru" tanpa mengurutkan seluruh riwayat |
+| `components` | `component_code`, `serial_number` | UNIQUE PARTIAL | Kode & serial unik antar komponen aktif |
+| `components` | `category`, `status` | B-TREE | Filter daftar komponen & kartu dashboard |
+| `component_installations` | `(asset_id, removed_date)` | COMPOSITE | Komponen aktif pada sebuah host |
+| `component_installations` | `(component_id, removed_date)` | COMPOSITE | Riwayat pemasangan sebuah komponen |
+| `component_installations` | `component_id` WHERE `removed_date IS NULL` | UNIQUE PARTIAL | Satu komponen terpasang di satu host |
 
 Dengan index di atas, pencarian tetap cepat saat data mencapai ribuan baris.
 

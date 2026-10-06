@@ -151,11 +151,11 @@
         </x-card>
 
         {{-- Spesifikasi --}}
-        <x-card :title="__('Spesifikasi Komponen')">
+        <x-card :title="__('Sistem Operasi')">
             @php($specs = $asset->filledSpecs())
 
             @if ($specs === [])
-                <p class="text-sm text-slate-500">{{ __('Belum ada spesifikasi yang dicatat.') }}</p>
+                <p class="text-sm text-slate-500">{{ __('Belum dicatat.') }}</p>
             @else
                 <dl class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
                     @foreach ($specs as $label => $value)
@@ -167,6 +167,128 @@
                 </dl>
             @endif
         </x-card>
+
+            {{-- Komponen terpasang --}}
+            <x-card :title="__('Komponen Terpasang')" :padded="false">
+                @if (auth()->user()->isAdmin())
+                    <x-slot name="actions">
+                        <a href="{{ route('components.install.create', $asset) }}">
+                            <x-primary-button type="button">{{ __('Pasang Komponen') }}</x-primary-button>
+                        </a>
+                    </x-slot>
+                @endif
+
+                @if ($installedComponents->isEmpty())
+                    <x-empty-state
+                        :title="__('Belum ada komponen terpasang')"
+                        :description="__('Komponen yang dipasang ke PC ini akan tampil di sini.')"
+                        icon="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Kode') }}</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Kategori') }}</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Merek / Model') }}</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Serial') }}</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Sejak') }}</th>
+                                    @if (auth()->user()->isAdmin())
+                                        <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Aksi') }}</th>
+                                    @endif
+                                </tr>
+                            </thead>
+                            @foreach ($installedComponents as $installation)
+                                @php($piece = $installation->component)
+                                {{-- Satu tbody per komponen: state Alpine (panel Lepas) per baris. --}}
+                                <tbody x-data="{ open: @js($errors->has('removed_date')) }" class="divide-y divide-slate-100">
+                                    <tr class="transition hover:bg-slate-50">
+                                        <td class="whitespace-nowrap px-5 py-3.5">
+                                            @if ($piece)
+                                                <a href="{{ route('components.show', $piece) }}"
+                                                   class="font-mono text-sm font-medium text-indigo-600 hover:underline">
+                                                    {{ $piece->component_code }}
+                                                </a>
+                                            @else
+                                                —
+                                            @endif
+                                        </td>
+                                        <td class="whitespace-nowrap px-5 py-3.5">
+                                            @if ($piece)
+                                                <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                                                    {{ $piece->category->label() }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="whitespace-nowrap px-5 py-3.5 text-sm text-slate-600">
+                                            {{ $piece?->fullName() ?? '—' }}
+                                        </td>
+                                        <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-500">
+                                            {{ $piece?->serial_number ?? '—' }}
+                                        </td>
+                                        <td class="whitespace-nowrap px-5 py-3.5 text-sm text-slate-600">
+                                            {{ $installation->installed_date->format('d M Y') }}
+                                        </td>
+                                        @if (auth()->user()->isAdmin())
+                                            <td class="whitespace-nowrap px-5 py-3.5 text-right">
+                                                <div class="inline-flex items-center gap-3">
+                                                    @if ($piece)
+                                                        <a href="{{ route('components.move.create', ['component' => $piece->id, 'from' => 'asset']) }}"
+                                                           class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
+                                                            {{ __('Pindah') }}
+                                                        </a>
+                                                    @endif
+
+                                                    <button type="button" x-on:click="open = ! open"
+                                                            class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">
+                                                        {{ __('Lepas') }}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        @endif
+                                    </tr>
+
+                                    @if (auth()->user()->isAdmin())
+                                        <tr x-show="open" x-cloak x-transition>
+                                            <td colspan="6" class="bg-slate-50 px-5 py-4">
+                                                <form method="POST" action="{{ route('components.remove', $installation) }}"
+                                                      class="flex flex-wrap items-end gap-3">
+                                                    @csrf
+                                                    <input type="hidden" name="from" value="asset">
+
+                                                    <div>
+                                                        <x-input-label for="removed_date_{{ $installation->id }}" :value="__('Tanggal Lepas')" />
+                                                        <x-text-input id="removed_date_{{ $installation->id }}" name="removed_date"
+                                                                      type="date" class="mt-1"
+                                                                      :value="old('removed_date', now()->format('Y-m-d'))" required />
+                                                        <x-input-error class="mt-1" :messages="$errors->get('removed_date')" />
+                                                    </div>
+
+                                                    <div class="min-w-[200px] flex-1">
+                                                        <x-input-label for="remove_notes_{{ $installation->id }}" :value="__('Catatan (opsional)')" />
+                                                        <x-text-input id="remove_notes_{{ $installation->id }}" name="notes"
+                                                                      type="text" class="mt-1" maxlength="1000"
+                                                                      placeholder="{{ __('Kondisi saat dilepas...') }}" />
+                                                    </div>
+
+                                                    <div class="flex items-center gap-2">
+                                                        <x-primary-button>{{ __('Konfirmasi Lepas') }}</x-primary-button>
+                                                        <x-secondary-button type="button" x-on:click="open = false">{{ __('Batal') }}</x-secondary-button>
+                                                    </div>
+                                                </form>
+
+                                                @error('installation')
+                                                    <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
+                                                @enderror
+                                            </td>
+                                        </tr>
+                                    @endif
+                                </tbody>
+                            @endforeach
+                        </table>
+                    </div>
+                @endif
+            </x-card>
 
             {{-- Riwayat --}}
             <x-card :title="__('Riwayat Pemakaian')" :padded="false">

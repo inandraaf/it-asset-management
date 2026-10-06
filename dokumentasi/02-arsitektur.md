@@ -32,11 +32,15 @@ app/
 ├── Enums/
 │   ├── AssetStatus.php
 │   ├── AssetType.php
+│   ├── ComponentCategory.php      # Fase 2
+│   ├── ComponentStatus.php        # Fase 2
 │   └── UserRole.php
 ├── Http/
 │   ├── Controllers/
 │   │   ├── AssetController.php
 │   │   ├── AssetAssignmentController.php
+│   │   ├── ComponentController.php              # Fase 2
+│   │   ├── ComponentInstallationController.php  # Fase 2
 │   │   ├── DashboardController.php
 │   │   ├── DepartmentController.php
 │   │   └── EmployeeController.php
@@ -46,7 +50,12 @@ app/
 │       ├── Asset/
 │       │   ├── StoreAssetRequest.php
 │       │   └── UpdateAssetRequest.php
+│       ├── Component/
+│       │   ├── StoreComponentRequest.php        # Fase 2
+│       │   └── UpdateComponentRequest.php       # Fase 2
 │       ├── AssignAssetRequest.php
+│       ├── InstallComponentRequest.php          # Fase 2
+│       ├── RemoveComponentRequest.php           # Fase 2
 │       ├── ReturnAssetRequest.php
 │       ├── TransferAssetRequest.php
 │       ├── DepartmentRequest.php
@@ -54,13 +63,16 @@ app/
 ├── Models/
 │   ├── Asset.php
 │   ├── AssetAssignment.php
+│   ├── Component.php               # Fase 2
+│   ├── ComponentInstallation.php   # Fase 2
 │   ├── Department.php
 │   └── Employee.php
 ├── Policies/
 │   └── AssetPolicy.php
 └── Services/
     ├── AssetAllocationService.php
-    └── AssetCodeGenerator.php
+    ├── CodeGenerator.php           # generalisasi dari AssetCodeGenerator (Fase 2)
+    └── ComponentAllocationService.php  # Fase 2
 
 config/
 └── itam.php                       # SEED_ADMIN_PASSWORD dan config khusus ITAM
@@ -79,9 +91,16 @@ resources/views/
 │   ├── assign.blade.php
 │   ├── transfer.blade.php
 │   └── trashed.blade.php
+├── parts/                         # Fase 2 — halaman domain komponen
+│   ├── index.blade.php
+│   ├── create.blade.php
+│   ├── edit.blade.php
+│   ├── show.blade.php
+│   ├── install.blade.php
+│   └── trashed.blade.php
 ├── departments/
 ├── employees/
-├── components/
+├── components/                    # Blade komponen (x-card, x-empty-state, dll)
 │   ├── card.blade.php            # wadah konten (border, rounded, header opsional)
 │   ├── empty-state.blade.php     # tampilan state kosong
 │   ├── status-badge.blade.php    # badge status aset
@@ -93,6 +112,13 @@ resources/views/
 │   └── guest.blade.php           # layout login
 └── dashboard.blade.php
 ```
+
+> **Mengapa halaman komponen ada di `views/parts/`, bukan `views/components/`.**
+> Folder `resources/views/components/` **sudah dipakai** oleh Blade component
+> (`<x-card>`, `<x-status-badge>`, dst.) — meletakkan view halaman di sana akan
+> membingungkan dan berisiko bentrok penamaan. Nama folder `parts` dipilih agar
+> tidak ambigu, sementara nama route/controller/model tetap `components`
+> (standar istilah perangkat keras).
 
 > Komponen Breeze `nav-link`, `responsive-nav-link`, dan `application-logo`
 > dihapus karena digantikan layout sidebar dan logo brand di
@@ -135,6 +161,35 @@ enum UserRole: string
 {
     case Admin = 'admin';
     case Viewer = 'viewer';
+}
+
+// Fase 2 — komponen
+// app/Enums/ComponentCategory.php
+enum ComponentCategory: string
+{
+    case Cpu = 'cpu';
+    case Ram = 'ram';
+    case Storage = 'storage';
+    case Gpu = 'gpu';
+    case Motherboard = 'motherboard';
+    case Psu = 'psu';
+    case Casing = 'casing';
+    case Monitor = 'monitor';
+    case Keyboard = 'keyboard';
+    case Mouse = 'mouse';
+    case Other = 'other';
+
+    public function codePrefix(): string;   // CPU, RAM, DSK, GPU, MBD, PSU, CSG, MON, KBD, MSE, CMP
+    public function isInternal(): bool;     // true untuk part di dalam host
+}
+
+// app/Enums/ComponentStatus.php
+enum ComponentStatus: string
+{
+    case InStock = 'In Stock';
+    case Installed = 'Installed';
+    case InRepair = 'In Repair';
+    case Retired = 'Retired';
 }
 ```
 

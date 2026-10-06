@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
  * Validasi input aset baru.
  *
  * Kode aset TIDAK diterima dari form: selalu dibuat sistem lewat
- * AssetCodeGenerator agar tidak ada tabrakan atau human error.
+ * CodeGenerator agar tidak ada tabrakan atau human error.
  *
  * @see dokumentasi/10-validasi.md §5
  */
@@ -43,7 +43,8 @@ class StoreAssetRequest extends FormRequest
                 'nullable', 'ip', 'max:45',
                 Rule::unique('assets', 'ip_address')->whereNull('deleted_at'),
             ],
-            'specs' => ['required', 'array'],
+            // 'specs' nullable: Fase 2 hanya menyimpan OS yang bersifat opsional.
+            'specs' => ['nullable', 'array'],
             ...$this->specRules(),
             'status' => ['sometimes', Rule::enum(AssetStatus::class)],
         ];

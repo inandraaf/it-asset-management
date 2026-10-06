@@ -31,6 +31,7 @@ Dokumentasi ini adalah turunan terperinci dari PRD **Sistem Manajemen Aset IT In
 | 11 | [non-fungsional.md](11-non-fungsional.md) | UI/UX, performa, index PostgreSQL, keamanan |
 | 12 | [acceptance-dan-roadmap.md](12-acceptance-dan-roadmap.md) | Kriteria penerimaan & roadmap milestone |
 | 13 | [operasional.md](13-operasional.md) | Setup, akun awal, perintah umum, backup & troubleshooting |
+| 14 | [manajemen-komponen.md](14-manajemen-komponen.md) | **Fase 2** — komponen (part) sebagai aset, riwayat pemasangan (selesai) |
 
 ## Cara Memakai Dokumentasi Ini
 
@@ -39,8 +40,11 @@ Dokumentasi ini adalah turunan terperinci dari PRD **Sistem Manajemen Aset IT In
 3. Setiap modul (05–08) berisi daftar file yang harus dibuat, route, dan aturan bisnisnya.
 4. Gunakan [10-validasi.md](10-validasi.md) sebagai acuan tunggal aturan validasi agar tidak terjadi duplikasi logika.
 5. Cek [12-acceptance-dan-roadmap.md](12-acceptance-dan-roadmap.md) untuk menentukan status MVP.
+6. Untuk modul komponen, baca [14-manajemen-komponen.md](14-manajemen-komponen.md).
 
 ## Status
+
+**MVP (Fase 1) — SELESAI**
 
 - [x] Skema database & migrasi
 - [x] Autentikasi & role
@@ -53,10 +57,21 @@ Dokumentasi ini adalah turunan terperinci dari PRD **Sistem Manajemen Aset IT In
 - [x] Dashboard
 - [x] Uji kriteria penerimaan
 
+**Fase 2 (Komponen) — SELESAI**
+
+- [x] Fondasi komponen (migrasi, model, enum)
+- [x] CRUD Komponen
+- [x] Pemasangan & riwayat
+- [x] Penyesuaian aset + migrasi data spesifikasi
+- [x] Dashboard & hardening
+
 ## Status MVP: SELESAI
 
-Seluruh kriteria penerimaan (AC-1 s/d AC-4) terverifikasi. Lihat [12-acceptance-dan-roadmap.md](12-acceptance-dan-roadmap.md)
+Seluruh kriteria penerimaan MVP (AC-1 s/d AC-4) terverifikasi. Lihat [12-acceptance-dan-roadmap.md](12-acceptance-dan-roadmap.md)
 untuk detail per milestone, dan [13-operasional.md](13-operasional.md) untuk cara menjalankan.
+
+Fase 2 (AC-5 s/d AC-13) **sudah diimplementasikan**: komponen (part) menjadi aset tersendiri
+dengan riwayat pemasangan. Lihat [14-manajemen-komponen.md](14-manajemen-komponen.md).
 
 ## Keputusan Desain yang Sudah Disetujui
 
@@ -75,5 +90,11 @@ untuk detail per milestone, dan [13-operasional.md](13-operasional.md) untuk car
 | Data user di atribut Alpine | Wajib `@js()`, dilarang `{{ }}` di dalam `x-data` (XSS) | [11](11-non-fungsional.md) |
 | Warna badge status | Hanya di komponen `status-badge`/`assignment-status` | [11](11-non-fungsional.md) |
 | Kode aset | Selalu dibuat sistem, form tidak menerima input kode | [06](06-manajemen-aset.md) |
-| Komponen komputer | Disimpan sebagai key di `specs` (jsonb), bukan tabel/aset terpisah | [06](06-manajemen-aset.md) §11 |
 | Hostname komputer | Kolom tersendiri (bukan bagian `specs`), unik antar aset aktif | [03](03-database.md), [06](06-manajemen-aset.md) |
+| **Komponen komputer (Fase 2)** | **Menjadi aset tersendiri** di tabel `components`, dipasang ke host lewat `component_installations`, riwayat perpindahan terlacak | [14](14-manajemen-komponen.md) |
+| **Penyimpanan komponen (Fase 2)** | Tabel terpisah, bukan satu tabel `assets` + `kind` — atribut berbeda & constraint host tetap kuat | [14](14-manajemen-komponen.md) §2 |
+| **Granularitas komponen (Fase 2)** | Per **unit fisik** (1 keping = 1 baris) agar perpindahan keping terlacak | [14](14-manajemen-komponen.md) §2 |
+| **`specs` aset (Fase 2)** | Tinggal `os`; part fisik pindah ke komponen, ringkasan HW dihitung otomatis | [14](14-manajemen-komponen.md) §9 |
+| **Kategori komponen (Fase 2)** | Internal (cpu/ram/storage/gpu/motherboard/psu/casing) + peripheral (monitor/keyboard/mouse) + `other` | [14](14-manajemen-komponen.md) §3 |
+| **OS bukan komponen (Fase 2)** | OS perangkat lunak, tetap atribut host | [14](14-manajemen-komponen.md) §3 |
+| **Folder view komponen (Fase 2)** | `resources/views/parts/` — `views/components/` sudah dipakai Blade component | [02](02-arsitektur.md) §3 |

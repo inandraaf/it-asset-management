@@ -71,10 +71,12 @@
                     ['label' => __('In Repair'), 'value' => $stats['in_repair']],
                     ['label' => __('Retired'), 'value' => $stats['retired']],
                     ['label' => __('Total Aset'), 'value' => $stats['total_assets']],
+                    ['label' => __('Total Komponen'), 'value' => $stats['total_components']],
+                    ['label' => __('Komponen di Gudang'), 'value' => $stats['components_in_stock']],
                     ['label' => __('Karyawan'), 'value' => $stats['total_employees']],
                     ['label' => __('Departemen'), 'value' => $stats['total_departments']],
                 ];
-                @endphp
+            @endphp
 
             @foreach ($secondary as $item)
                 <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">

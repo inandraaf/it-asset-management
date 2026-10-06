@@ -8,7 +8,7 @@ use App\Http\Requests\Asset\StoreAssetRequest;
 use App\Http\Requests\Asset\UpdateAssetRequest;
 use App\Models\Asset;
 use App\Models\Department;
-use App\Services\AssetCodeGenerator;
+use App\Services\CodeGenerator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,12 +21,17 @@ use Illuminate\Support\Facades\DB;
  */
 class AssetController extends Controller
 {
-    public function __construct(private readonly AssetCodeGenerator $codeGenerator) {}
+    public function __construct(private readonly CodeGenerator $codeGenerator) {}
 
     public function index(Request $request): View
     {
         $assets = Asset::query()
-            ->with(['activeAssignment.employee.department'])
+            ->with([
+                'activeAssignment.employee.department',
+                // Ringkasan perangkat keras dihitung dari komponen terpasang;
+                // di-eager load agar daftar tidak menembak query per baris.
+                'activeComponentInstallations.component',
+            ])
             ->when($request->filled('q'), function ($query) use ($request) {
                 $term = '%'.str_replace(['%', '_'], ['\%', '\_'], (string) $request->string('q')).'%';
 
@@ -103,10 +108,16 @@ class AssetController extends Controller
 
         $asset->load(['activeAssignment.employee.department', 'creator']);
 
+        $installedComponents = $asset->activeComponentInstallations()
+            ->with('component')
+            ->orderBy('installed_date')
+            ->get();
+
         return view('assets.show', [
             'asset' => $asset,
             'currentAssignment' => $asset->activeAssignment,
             'history' => $history,
+            'installedComponents' => $installedComponents,
         ]);
     }
 
@@ -136,6 +147,13 @@ class AssetController extends Controller
             return redirect()
                 ->route('assets.show', $asset)
                 ->with('error', 'Aset sedang dipegang karyawan. Lakukan Return sebelum menghapus.');
+        }
+
+        // K9: komponen harus dilepas lebih dulu.
+        if ($asset->hasInstalledComponents()) {
+            return redirect()
+                ->route('assets.show', $asset)
+                ->with('error', 'Aset masih memiliki komponen terpasang. Lepas komponennya terlebih dahulu.');
         }
 
         $code = $asset->asset_code;

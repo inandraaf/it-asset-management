@@ -4,7 +4,7 @@ namespace Tests\Unit;
 
 use App\Enums\AssetType;
 use App\Models\Asset;
-use App\Services\AssetCodeGenerator;
+use App\Services\CodeGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -16,9 +16,9 @@ class AssetCodeGeneratorTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function generator(): AssetCodeGenerator
+    private function generator(): CodeGenerator
     {
-        return app(AssetCodeGenerator::class);
+        return app(CodeGenerator::class);
     }
 
     public function test_first_pc_code_starts_at_one(): void

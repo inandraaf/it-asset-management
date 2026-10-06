@@ -9,7 +9,10 @@ erDiagram
     DEPARTMENTS ||--o{ EMPLOYEES : "memiliki"
     EMPLOYEES   ||--o{ ASSET_ASSIGNMENTS : "menerima"
     ASSETS      ||--o{ ASSET_ASSIGNMENTS : "dialokasikan"
+    ASSETS      ||--o{ COMPONENT_INSTALLATIONS : "menampung (host)"
+    COMPONENTS  ||--o{ COMPONENT_INSTALLATIONS : "dipasang"
     USERS       ||--o{ ASSETS : "mencatat (created_by)"
+    USERS       ||--o{ COMPONENTS : "mencatat (created_by)"
 
     DEPARTMENTS {
         bigint id PK
@@ -30,6 +33,7 @@ erDiagram
         string asset_code UK
         string type
         string brand
+        string hostname UK
         string mac_address UK
         string ip_address UK
         jsonb specs
@@ -49,7 +53,35 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
+    COMPONENTS {
+        bigint id PK
+        string component_code UK
+        string category
+        string brand
+        string model
+        string serial_number UK
+        jsonb specs
+        string status
+        text notes
+        bigint created_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+    COMPONENT_INSTALLATIONS {
+        bigint id PK
+        bigint component_id FK
+        bigint asset_id FK
+        date installed_date
+        date removed_date
+        text notes
+        bigint installed_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
 ```
+
+> Tabel `components` dan `component_installations` adalah bagian **Fase 2**.
+> Desain lengkapnya di [14-manajemen-komponen.md](14-manajemen-komponen.md).
 
 ## 2. Tabel `departments`
 
@@ -110,43 +142,31 @@ Schema::create('employees', function (Blueprint $table) {
 
 ### Key di dalam `specs` (jsonb)
 
-Komponen disimpan sebagai key di dalam JSON, **bukan tabel terpisah** (lihat keputusan desain di [06-manajemen-aset.md](06-manajemen-aset.md) §10).
+> **Fase 2 sudah berjalan.** Part fisik (cpu, ram, storage, gpu, motherboard, psu, casing,
+> monitor, keyboard, mouse) kini menjadi tabel **`components`**, dan `specs` tinggal `os`
+> (perangkat lunak, bukan benda fisik). Lihat
+> [14-manajemen-komponen.md](14-manajemen-komponen.md) §9.
+
+Setelah Fase 2, `specs` **hanya** menyimpan atribut non-fisik:
 
 | Key | Label tampilan | Wajib |
 | --- | --- | --- |
-| `cpu` | CPU | ✅ |
-| `ram` | RAM | — |
-| `storage` | Storage 1 | — |
-| `storage_2` | Storage 2 | — |
-| `gpu` | GPU | — |
-| `motherboard` | Motherboard | — |
-| `psu` | Power Supply | — |
-| `casing` | Casing | — |
-| `os` | Sistem Operasi | — |
-| `monitor` | Monitor | — |
-| `keyboard` | Keyboard | — |
-| `mouse` | Mouse | — |
+| `os` | Sistem Operasi | — (opsional) |
 
-Daftar key ini didefinisikan di `Asset::SPEC_KEYS` dan `Asset::specLabels()`. **Menambah komponen baru cukup menambah satu entri di sana** — tanpa migrasi, karena `specs` bertipe `jsonb`.
+Daftar key didefinisikan di `Asset::SPEC_KEYS` dan `Asset::specLabels()`.
 
 Contoh isi:
 
 ```json
 {
-  "cpu": "Intel Core i5-10400",
-  "ram": "16GB (2x8GB) DDR4",
-  "storage": "512GB NVMe SSD",
-  "storage_2": "1TB HDD",
-  "gpu": "NVIDIA GTX 1650 4GB",
-  "motherboard": "ASUS H510M-E",
-  "psu": "500W 80+ Bronze",
-  "casing": "ATX Mid Tower",
-  "os": "Windows 11 Pro 64-bit",
-  "monitor": "Dell P2219H 22\"",
-  "keyboard": "Logitech K120",
-  "mouse": "Logitech B100"
+  "os": "Windows 11 Pro 64-bit"
 }
 ```
+
+> **Ringkasan perangkat keras** (CPU, RAM, disk, dst.) tidak disimpan di `specs`, melainkan
+> **dihitung** dari komponen terpasang: `Asset::hardwareSummary()` membaca relasi
+> `activeComponentInstallations.component`. Lihat
+> [14-manajemen-komponen.md](14-manajemen-komponen.md) §9.
 
 ```php
 Schema::create('assets', function (Blueprint $table) {
@@ -237,6 +257,47 @@ DB::statement('CREATE UNIQUE INDEX one_active_assignment_per_asset
     ON asset_assignments (asset_id) WHERE returned_date IS NULL;');
 ```
 
+## 5b. Tabel `components` (Fase 2)
+
+Komponen (part) sebagai aset tersendiri. Desain lengkap: [14-manajemen-komponen.md](14-manajemen-komponen.md).
+
+| Kolom | Tipe | Constraint | Keterangan |
+| --- | --- | --- | --- |
+| `id` | bigserial | PK | |
+| `component_code` | varchar(30) | NOT NULL, UNIQUE (parsial) | Dibuat sistem, contoh `RAM-2026-0001` |
+| `category` | varchar(20) | NOT NULL, CHECK | `cpu`, `ram`, `storage`, `gpu`, `motherboard`, `psu`, `casing`, `monitor`, `keyboard`, `mouse`, `other` |
+| `brand` | varchar(100) | NOT NULL | Merek |
+| `model` | varchar(150) | nullable | Model |
+| `serial_number` | varchar(100) | UNIQUE (parsial), nullable | Nomor seri fisik |
+| `specs` | jsonb | NOT NULL, default `{}` | Atribut khas kategori |
+| `status` | varchar(20) | NOT NULL, default `In Stock` | CHECK 4 nilai |
+| `notes` | text | nullable | |
+| `created_by` | bigint | FK → `users.id`, `nullOnDelete` | |
+| `deleted_at` | timestamp | nullable | Soft delete |
+| `created_at` / `updated_at` | timestamp | nullable | |
+
+## 5c. Tabel `component_installations` (Fase 2)
+
+Satu baris = satu periode pemasangan komponen pada sebuah host.
+
+| Kolom | Tipe | Constraint | Keterangan |
+| --- | --- | --- | --- |
+| `id` | bigserial | PK | |
+| `component_id` | bigint | FK → `components.id`, `cascadeOnDelete` | Komponen (subjek riwayat) |
+| `asset_id` | bigint | FK → `assets.id`, `restrictOnDelete` | Host tempat dipasang |
+| `installed_date` | date | NOT NULL | |
+| `removed_date` | date | nullable | `NULL` = masih terpasang |
+| `notes` | text | nullable | |
+| `installed_by` | bigint | FK → `users.id`, `nullOnDelete` | |
+| `created_at` / `updated_at` | timestamp | nullable | |
+
+Invariant: satu komponen maksimal terpasang di **satu** host pada satu waktu.
+
+```php
+DB::statement('CREATE UNIQUE INDEX one_active_install_per_component
+    ON component_installations (component_id) WHERE removed_date IS NULL');
+```
+
 ## 6. tabel `users` (modifikasi)
 
 Tambahkan `role` pada migrasi users atau migrasi terpisah:
@@ -270,6 +331,16 @@ DB::statement("ALTER TABLE users ADD CONSTRAINT users_role_check
 
 DB::statement("ALTER TABLE asset_assignments ADD CONSTRAINT assignment_date_check
     CHECK (returned_date IS NULL OR returned_date >= assigned_date)");
+
+// Fase 2 — komponen
+DB::statement("ALTER TABLE components ADD CONSTRAINT components_category_check
+    CHECK (category IN ('cpu','ram','storage','gpu','motherboard','psu','casing','monitor','keyboard','mouse','other'))");
+
+DB::statement("ALTER TABLE components ADD CONSTRAINT components_status_check
+    CHECK (status IN ('In Stock','Installed','In Repair','Retired'))");
+
+DB::statement("ALTER TABLE component_installations ADD CONSTRAINT component_install_date_check
+    CHECK (removed_date IS NULL OR removed_date >= installed_date)");
 ```
 
 > **Catatan implementasi:** enum **tidak dibuat sebagai PostgreSQL `ENUM type`**, melainkan `varchar` + `CHECK constraint`. Alasannya: mengubah nilai enum PostgreSQL menuntut `ALTER TYPE ... ADD VALUE` yang tidak bisa dijalankan di dalam transaksi, sementara `CHECK` mudah di-`DROP`/re-create. Casting enum dilakukan di sisi Laravel (`App\Enums\*`) sehingga aplikasi tetap type-safe.
@@ -291,6 +362,12 @@ DB::statement("ALTER TABLE asset_assignments ADD CONSTRAINT assignment_date_chec
 | `asset_assignments` | `asset_id` WHERE `returned_date IS NULL` | UNIQUE PARTIAL | Satu assignment aktif per aset |
 | `asset_assignments` | `(employee_id, returned_date)` | COMPOSITE | Hitung aset aktif per departemen (dashboard) |
 | `asset_assignments` | `(assigned_date, id)` | COMPOSITE | Daftar alokasi terbaru (ORDER BY ... LIMIT) |
+| `components` | `component_code` | UNIQUE PARTIAL (`deleted_at IS NULL`) | Kode komponen unik antar komponen aktif |
+| `components` | `serial_number` | UNIQUE PARTIAL (`deleted_at IS NULL AND serial_number IS NOT NULL`) | Nomor seri unik bila diisi |
+| `components` | `category`, `status` | B-TREE | Filter daftar komponen |
+| `component_installations` | `(asset_id, removed_date)` | COMPOSITE | Komponen aktif pada sebuah host |
+| `component_installations` | `(component_id, removed_date)` | COMPOSITE | Riwayat pemasangan sebuah komponen |
+| `component_installations` | `component_id` WHERE `removed_date IS NULL` | UNIQUE PARTIAL | Satu komponen terpasang di satu host |
 
 ## 9. Urutan Migrasi
 
@@ -302,6 +379,11 @@ DB::statement("ALTER TABLE asset_assignments ADD CONSTRAINT assignment_date_chec
 6. `2026_01_01_000005_create_asset_assignments_table.php`
 7. `2026_01_01_000006_add_dashboard_indexes_to_asset_assignments_table.php`
 8. `2026_01_01_000007_add_hostname_to_assets_table.php`
+
+Fase 2 (belum diimplementasikan):
+
+9. `xxxx_create_components_table.php`
+10. `xxxx_create_component_installations_table.php`
 
 ## 10. Cast Model (Target)
 

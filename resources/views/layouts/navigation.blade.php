@@ -15,6 +15,12 @@
             'icon' => 'M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25',
         ],
         [
+            'label' => __('Komponen'),
+            'route' => 'components.index',
+            'active' => request()->routeIs('components.*'),
+            'icon' => 'M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z',
+        ],
+        [
             'label' => __('Karyawan'),
             'route' => 'employees.index',
             'active' => request()->routeIs('employees.*'),
@@ -93,6 +99,28 @@ class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium tr
     <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
 </svg>
 {{ __('Aset Terhapus') }}
+</a>
+
+<a href="{{ route('components.create') }}"
+class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition
+{{ request()->routeIs('components.create')
+? 'bg-indigo-50 text-indigo-700 '
+: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 ' }}">
+<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+</svg>
+{{ __('Tambah Komponen') }}
+</a>
+
+<a href="{{ route('components.trashed') }}"
+class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition
+{{ request()->routeIs('components.trashed')
+? 'bg-indigo-50 text-indigo-700 '
+: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 ' }}">
+<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+</svg>
+{{ __('Komponen Terhapus') }}
 </a>
 @endif
 </nav>

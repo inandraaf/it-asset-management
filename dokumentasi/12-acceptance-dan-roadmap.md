@@ -81,6 +81,16 @@ MVP dianggap selesai jika **seluruh** kriteria berikut terpenuhi dan terverifika
 
 ---
 
+## 2b. Kriteria Penerimaan Fase 2 (Komponen)
+
+Desain lengkap: [14-manajemen-komponen.md](14-manajemen-komponen.md).
+
+> AC-5 s/d AC-13 terdaftar di [14-manajemen-komponen.md](14-manajemen-komponen.md) §14.
+> Ringkasnya: komponen punya kode otomatis (AC-5), bisa dipasang/dilepas dengan riwayat
+> (AC-6, AC-7), transfer antarmesin menghasilkan dua baris riwayat (AC-8), pemasangan
+> ganda/tidak valid ditolak (AC-9, AC-10), ringkasan PC ikut berubah (AC-11), hapus PC
+> berkomponen ditolak (AC-12), dan viewer hanya membaca (AC-13).
+
 ## 3. Matriks Kriteria → Modul
 
 | Kriteria | Dokumen Terkait | Modul Kode |
@@ -89,6 +99,7 @@ MVP dianggap selesai jika **seluruh** kriteria berikut terpenuhi dan terverifika
 | AC-2 Tolak duplikasi MAC/IP | [03](03-database.md), [10](10-validasi.md) | AssetRequest, constraint DB |
 | AC-3 Transfer & riwayat | [07](07-alokasi-aset.md) | AssetAllocationService, AssetAssignment |
 | AC-4 Dashboard | [08](08-dashboard.md) | DashboardController |
+| AC-5 … AC-13 Komponen (Fase 2) | [14](14-manajemen-komponen.md) | Component, ComponentInstallation, ComponentAllocationService |
 
 ## 4. Roadmap Milestone
 
@@ -245,12 +256,65 @@ class AssetValidationTest extends TestCase
 - Role & permission granular (Spatie Permission).
 - Ticketing perbaikan & maintenance history.
 - Depresiasi & nilai buku aset.
-- Pencatatan aksesori/consumables.
+- Pencatatan aksesori/consumables habis pakai (tinta, kabel, thermal paste).
+- Validasi kompatibilitas komponen otomatis (DDR4 vs DDR5, socket CPU).
 - Import/export Excel (migrasi dari data lama).
 - Notifikasi email saat assign.
-- Barcode/QR label aset.
+- Barcode/QR label aset & komponen.
 - Multi-lokasi / multi-cabang.
 - Audit log menyeluruh (Spatie Activitylog).
+- Pencarian aset berdasarkan nomor seri komponen.
+
+## 6b. Fase 2 — Manajemen Komponen
+
+Setelah MVP selesai, lingkup diperluas: **komponen (part) menjadi aset tersendiri** yang
+bisa dipasang/dilepas dan dilacak perpindahannya antarmesin. Desain lengkap:
+**[14-manajemen-komponen.md](14-manajemen-komponen.md)**.
+
+### F2-1 — Fondasi Komponen ✅
+
+- [x] Migrasi `components` + `component_installations` + CHECK + partial unique index
+- [x] Enum `ComponentCategory`, `ComponentStatus`
+- [x] Model `Component`, `ComponentInstallation` + relasi
+- [x] Generalisasi `AssetCodeGenerator` → `CodeGenerator`
+
+**Exit criteria:** `migrate:fresh --seed` sukses; relasi & constraint terverifikasi.
+
+### F2-2 — CRUD Komponen ✅
+
+- [x] `StoreComponentRequest` / `UpdateComponentRequest` (field menyesuaikan kategori)
+- [x] `ComponentController` (index, create, store, show, edit, update, destroy, trashed, restore)
+- [x] View `parts/{index,create,edit,show,trashed}` + menu sidebar
+- [x] Pencarian & filter kategori/status
+
+**Exit criteria:** AC-5 lulus.
+
+### F2-3 — Pemasangan & Riwayat ✅
+
+- [x] `ComponentAllocationService` (install / remove / move, transaksi + lock)
+- [x] `ComponentInstallationController` + request
+- [x] Bagian "Komponen Terpasang" di detail aset
+- [x] Riwayat pemasangan di detail komponen
+
+**Exit criteria:** AC-6 … AC-10 lulus.
+
+### F2-4 — Penyesuaian Aset & Migrasi Data ✅
+
+- [x] `assets.specs` → hanya `os`; part dihapus dari `Asset::SPEC_KEYS`
+- [x] Ringkasan perangkat keras dihitung dari komponen terpasang
+- [x] Guard hapus permanen aset yang masih punya komponen
+- [x] Perintah `components:import-from-specs --dry-run`
+- [x] `ComponentSeeder` + penyesuaian `AssetSeeder`
+
+**Exit criteria:** AC-11 dan AC-12 lulus.
+
+### F2-5 — Dashboard & Hardening ✅
+
+- [x] Kartu Total Komponen & Komponen di Gudang
+- [x] Audit N+1 (eager load komponen pada daftar aset)
+- [x] Feature test lengkap + Pint bersih
+
+**Exit criteria:** AC-13 lulus; seluruh test hijau.
 
 ## 7. Risiko & Mitigasi
 

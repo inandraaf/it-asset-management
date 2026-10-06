@@ -72,19 +72,14 @@
                 </div>
             </x-card>
 
-            <x-card :title="__('Spesifikasi Komponen')"
-                    :description="__('Perbarui bila ada upgrade komponen.')">
-                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    @foreach ($specKeys as $key)
-                        @php($required = in_array($key, $requiredSpecKeys, true))
-                        <div @class(['sm:col-span-2' => $key === 'cpu'])>
-                            <x-input-label :for="'specs_'.$key" :value="$specLabels[$key].($required ? ' *' : '')" />
-                            <x-text-input :id="'specs_'.$key" :name="'specs['.$key.']'" type="text" class="mt-1"
-                                          :value="old('specs.'.$key, $asset->specs[$key] ?? '')"
-                                          :required="$required" maxlength="100" />
-                            <x-input-error class="mt-2" :messages="$errors->get('specs.'.$key)" />
-                        </div>
-                    @endforeach
+            <x-card :title="__('Sistem Operasi')"
+                    :description="__('Komponen fisik dikelola di bagian Komponen Terpasang pada halaman detail.')">
+                <div>
+                    <x-input-label for="specs_os" :value="__('Sistem Operasi (opsional)')" />
+                    <x-text-input id="specs_os" name="specs[os]" type="text" class="mt-1"
+                                  :value="old('specs.os', $asset->specs['os'] ?? '')" maxlength="100"
+                                  placeholder="{{ __('Contoh: Windows 11 Pro 64-bit') }}" />
+                    <x-input-error class="mt-2" :messages="$errors->get('specs.os')" />
                 </div>
             </x-card>
 

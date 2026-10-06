@@ -31,7 +31,7 @@ class AssetTest extends TestCase
             'brand' => 'Dell',
             'mac_address' => 'AA:BB:CC:DD:EE:01',
             'ip_address' => null,
-            'specs' => ['cpu' => 'i5-10400', 'ram' => '16GB', 'storage' => '512GB SSD', 'os' => 'Windows 11'],
+            'specs' => ['os' => 'Windows 11'],
         ], $overrides);
     }
 
@@ -80,7 +80,7 @@ class AssetTest extends TestCase
         $this->assertSame('PC-'.now()->year.'-0001', $asset->asset_code);
         $this->assertSame(AssetStatus::Available, $asset->status);
         $this->assertNotNull($asset->created_by);
-        $this->assertSame('i5-10400', $asset->specs['cpu']);
+        $this->assertSame('Windows 11', $asset->specs['os']);
     }
 
     public function test_laptop_code_uses_lt_prefix(): void
@@ -209,77 +209,112 @@ class AssetTest extends TestCase
         $this->assertSame(2, Asset::withTrashed()->where('hostname', 'pc-old-01')->count());
     }
 
-    // --------------------------------------------- Spesifikasi komponen
+    // ---------------------------------- Spesifikasi host (Fase 2: OS saja)
 
-    public function test_all_spec_components_are_stored(): void
+    public function test_only_os_is_stored_in_asset_specs(): void
     {
-        $specs = [
-            'cpu' => 'Intel Core i7-11700',
-            'ram' => '32GB DDR4',
-            'storage' => '1TB NVMe SSD',
-            'storage_2' => '2TB HDD',
-            'gpu' => 'NVIDIA RTX 3060',
-            'motherboard' => 'ASUS B560M',
-            'psu' => '650W 80+ Gold',
-            'casing' => 'ATX Mid Tower',
-            'os' => 'Windows 11 Pro',
-            'monitor' => 'Dell P2419H',
-            'keyboard' => 'Logitech K120',
-            'mouse' => 'Logitech B100',
-        ];
-
         $this->actingAs($this->admin())
-            ->post(route('assets.store'), $this->payload(['specs' => $specs]))
+            ->post(route('assets.store'), $this->payload(['specs' => ['os' => 'Windows 11 Pro']]))
             ->assertSessionHasNoErrors();
 
-        $stored = Asset::sole()->specs;
-
-        foreach ($specs as $key => $value) {
-            $this->assertSame($value, $stored[$key], "Spesifikasi [$key] tidak tersimpan.");
-        }
+        $this->assertSame(['os' => 'Windows 11 Pro'], Asset::sole()->specs);
     }
 
-    public function test_empty_spec_components_are_not_stored(): void
+    public function test_physical_part_keys_are_ignored_in_asset_specs(): void
     {
+        // Part fisik kini komponen; key ini tidak lagi valid untuk host.
         $this->actingAs($this->admin())
             ->post(route('assets.store'), $this->payload([
-                'specs' => ['cpu' => 'i5', 'gpu' => '', 'psu' => '   '],
+                'specs' => ['os' => 'Windows 11', 'cpu' => 'i7', 'ram' => '32GB', 'gpu' => 'RTX 3060'],
             ]))
             ->assertSessionHasNoErrors();
 
         $stored = Asset::sole()->specs;
 
-        $this->assertArrayHasKey('cpu', $stored);
+        $this->assertSame('Windows 11', $stored['os']);
+        $this->assertArrayNotHasKey('cpu', $stored);
+        $this->assertArrayNotHasKey('ram', $stored);
         $this->assertArrayNotHasKey('gpu', $stored);
-        $this->assertArrayNotHasKey('psu', $stored);
     }
 
-    public function test_unknown_spec_keys_are_ignored(): void
+    public function test_empty_os_is_not_stored(): void
     {
         $this->actingAs($this->admin())
-            ->post(route('assets.store'), $this->payload([
-                'specs' => ['cpu' => 'i5', 'sesuatu_yang_aneh' => 'x'],
-            ]))
+            ->post(route('assets.store'), $this->payload(['specs' => ['os' => '   ']]))
             ->assertSessionHasNoErrors();
 
-        $this->assertArrayNotHasKey('sesuatu_yang_aneh', Asset::sole()->specs);
+        $this->assertArrayNotHasKey('os', Asset::sole()->specs);
     }
 
-    public function test_asset_detail_displays_all_filled_specs_and_hostname(): void
+    public function test_hardware_summary_is_computed_from_installed_components(): void
+    {
+        $asset = Asset::factory()->create();
+        $component = \App\Models\Component::factory()
+            ->ofCategory(\App\Enums\ComponentCategory::Ram)
+            ->create(['brand' => 'Kingston', 'model' => 'Fury 16GB']);
+
+        \App\Models\ComponentInstallation::factory()->create([
+            'component_id' => $component->id,
+            'asset_id' => $asset->id,
+            'removed_date' => null,
+        ]);
+
+        $asset->load('activeComponentInstallations.component');
+
+        $this->assertSame('Kingston Fury 16GB', $asset->hardwareSummary());
+    }
+
+    public function test_hardware_summary_is_empty_without_components(): void
+    {
+        $asset = Asset::factory()->create();
+
+        $this->assertSame('—', $asset->hardwareSummary());
+    }
+
+    public function test_asset_detail_displays_os_hostname_and_components(): void
     {
         $asset = Asset::factory()->create([
             'hostname' => 'pc-rnd-07',
-            'specs' => ['cpu' => 'i7-11700', 'ram' => '32GB', 'gpu' => 'RTX 3060'],
+            'specs' => ['os' => 'Windows 11 Pro'],
+        ]);
+
+        $component = \App\Models\Component::factory()
+            ->ofCategory(\App\Enums\ComponentCategory::Gpu)
+            ->create(['brand' => 'NVIDIA', 'model' => 'RTX 3060', 'component_code' => 'GPU-2026-0001']);
+
+        \App\Models\ComponentInstallation::factory()->create([
+            'component_id' => $component->id,
+            'asset_id' => $asset->id,
+            'removed_date' => null,
         ]);
 
         $this->actingAs($this->admin())
             ->get(route('assets.show', $asset))
             ->assertOk()
             ->assertSee('pc-rnd-07')
-            ->assertSee('i7-11700')
-            ->assertSee('32GB')
-            ->assertSee('RTX 3060')
-            ->assertSee('GPU');
+            ->assertSee('Windows 11 Pro')
+            ->assertSee('Komponen Terpasang')
+            ->assertSee('GPU-2026-0001')
+            ->assertSee('NVIDIA RTX 3060');
+    }
+
+    public function test_installed_component_blocks_asset_deletion(): void
+    {
+        $asset = Asset::factory()->create();
+        $component = \App\Models\Component::factory()->create();
+
+        \App\Models\ComponentInstallation::factory()->create([
+            'component_id' => $component->id,
+            'asset_id' => $asset->id,
+            'removed_date' => null,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->delete(route('assets.destroy', $asset))
+            ->assertRedirect(route('assets.show', $asset))
+            ->assertSessionHas('error');
+
+        $this->assertNotSoftDeleted('assets', ['id' => $asset->id]);
     }
 
     // ----------------------------------------------------------- Validasi
@@ -372,11 +407,14 @@ class AssetTest extends TestCase
             ->assertSessionHasErrors('type');
     }
 
-    public function test_cpu_is_required(): void
+    public function test_asset_can_be_created_without_any_specs(): void
     {
+        // Fase 2: tidak ada spesifikasi host yang wajib (OS opsional).
         $this->actingAs($this->admin())
-            ->post(route('assets.store'), $this->payload(['specs' => ['ram' => '16GB']]))
-            ->assertSessionHasErrors('specs.cpu');
+            ->post(route('assets.store'), $this->payload(['specs' => []]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame([], Asset::sole()->specs);
     }
 
     // ------------------------------------------------------------- Mengubah
@@ -390,7 +428,7 @@ class AssetTest extends TestCase
                 'brand' => 'Dell Updated',
                 'mac_address' => $asset->mac_address,
                 'ip_address' => '10.0.0.5',
-                'specs' => ['cpu' => 'i7-11700', 'ram' => '32GB'],
+                'specs' => ['os' => 'Windows 11 Pro'],
                 'status' => AssetStatus::Available->value,
             ])
             ->assertRedirect(route('assets.show', $asset));
@@ -398,7 +436,7 @@ class AssetTest extends TestCase
         $asset->refresh();
         $this->assertSame('Dell Updated', $asset->brand);
         $this->assertSame('10.0.0.5', $asset->ip_address);
-        $this->assertSame('i7-11700', $asset->specs['cpu']);
+        $this->assertSame('Windows 11 Pro', $asset->specs['os']);
     }
 
     public function test_type_and_asset_code_cannot_be_changed_via_update(): void
@@ -410,7 +448,7 @@ class AssetTest extends TestCase
                 'brand' => 'Dell',
                 'mac_address' => $asset->mac_address,
                 'ip_address' => null,
-                'specs' => ['cpu' => 'i5'],
+                'specs' => ['os' => 'Windows 11'],
                 'status' => AssetStatus::Available->value,
                 'type' => AssetType::Laptop->value,
                 'asset_code' => 'HACKED-0001',
@@ -430,7 +468,7 @@ class AssetTest extends TestCase
                 'brand' => 'Dell',
                 'mac_address' => 'AA:BB:CC:DD:EE:01',
                 'ip_address' => null,
-                'specs' => ['cpu' => 'i5'],
+                'specs' => ['os' => 'Windows 11'],
                 'status' => AssetStatus::Available->value,
             ])
             ->assertSessionHasNoErrors();
@@ -446,7 +484,7 @@ class AssetTest extends TestCase
                 'brand' => $asset->brand,
                 'mac_address' => $asset->mac_address,
                 'ip_address' => null,
-                'specs' => ['cpu' => 'i5'],
+                'specs' => ['os' => 'Windows 11'],
                 'status' => AssetStatus::Available->value,
             ])
             ->assertSessionHasErrors('status');

@@ -50,9 +50,47 @@ class DashboardTest extends TestCase
             ->assertSee('Aset Menganggur');
     }
 
-    public function test_stats_count_assets_by_type_and_status(): void
+    public function test_dashboard_shows_component_labels(): void
     {
-        // Jenis dipatok eksplisit: factory memilih tipe secara acak.
+        $this->actingAs(User::factory()->admin()->create())
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('Total Komponen')
+            ->assertSee('Komponen di Gudang');
+    }
+
+    public function test_stats_count_components_by_status(): void
+    {
+        \App\Models\Component::factory()->create(['status' => \App\Enums\ComponentStatus::InStock]);
+        \App\Models\Component::factory()->create(['status' => \App\Enums\ComponentStatus::Installed]);
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get('/dashboard')
+            ->assertViewHas('stats', function (array $stats) {
+                $this->assertSame(2, $stats['total_components']);
+                $this->assertSame(1, $stats['components_in_stock']);
+                $this->assertSame(1, $stats['components_installed']);
+
+                return true;
+            });
+    }
+
+    public function test_soft_deleted_components_are_not_counted(): void
+    {
+        \App\Models\Component::factory()->create();
+        \App\Models\Component::factory()->create()->delete();
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get('/dashboard')
+            ->assertViewHas('stats', function (array $stats) {
+                $this->assertSame(1, $stats['total_components']);
+
+                return true;
+            });
+    }
+
+    public function test_stats_count_assets_by_type_and_status(): void
+    {        // Jenis dipatok eksplisit: factory memilih tipe secara acak.
         Asset::factory()->pc()->create();
         Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         Asset::factory()->pc()->create(['status' => AssetStatus::InRepair]);

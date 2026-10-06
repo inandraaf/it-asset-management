@@ -26,13 +26,14 @@ class AssetFactory extends Factory
                 .str_pad((string) fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
             'type' => $type,
             'brand' => fake()->randomElement(['Dell', 'Lenovo', 'HP', 'Asus', 'Acer', 'Apple']),
-            'hostname' => strtoupper(fake()->unique()->bothify('PC-????-##')),
+            // Hostname disimpan lowercase, konsisten dengan normalisasi
+            // StoreAssetRequest dan seeder.
+            'hostname' => fake()->unique()->bothify('pc-????-##'),
             'mac_address' => $this->randomMacAddress(),
             'ip_address' => null,
+            // Fase 2: `specs` host hanya menyimpan atribut non-fisik (OS).
+            // Komponen fisik dikelola lewat tabel `components`.
             'specs' => [
-                'cpu' => fake()->randomElement(['i3-10100', 'i5-10400', 'i7-10700', 'Ryzen 5 5600']),
-                'ram' => fake()->randomElement(['8GB', '16GB', '32GB']),
-                'storage' => fake()->randomElement(['256GB SSD', '512GB SSD', '1TB HDD']),
                 'os' => fake()->randomElement(['Windows 10', 'Windows 11', 'Ubuntu 22.04']),
             ],
             'status' => AssetStatus::Available,

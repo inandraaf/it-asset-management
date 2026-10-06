@@ -128,9 +128,12 @@
                                         </span>
                                     </td>
                                     <td class="px-5 py-3.5 text-xs text-slate-600">
-                                        <div class="max-w-xs truncate" title="{{ $asset->specSummary(6) }}">
-                                            {{ $asset->specSummary() }}
+                                        <div class="max-w-xs truncate" title="{{ $asset->hardwareSummary(6) }}">
+                                            {{ $asset->hardwareSummary() }}
                                         </div>
+                                        @if ($asset->osLabel() !== '—')
+                                            <div class="truncate text-slate-400">{{ $asset->osLabel() }}</div>
+                                        @endif
                                     </td>
                             <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-600">
                                 {{ $asset->mac_address }}

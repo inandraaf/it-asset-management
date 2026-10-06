@@ -40,7 +40,8 @@ class UpdateAssetRequest extends FormRequest
                 'nullable', 'ip', 'max:45',
                 Rule::unique('assets', 'ip_address')->ignore($assetId)->whereNull('deleted_at'),
             ],
-            'specs' => ['required', 'array'],
+            // 'specs' nullable: Fase 2 hanya menyimpan OS yang bersifat opsional.
+            'specs' => ['nullable', 'array'],
             ...$this->specRules(),
             'status' => ['required', Rule::enum(AssetStatus::class)],
         ];

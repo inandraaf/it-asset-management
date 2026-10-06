@@ -33,14 +33,24 @@ Membangun aplikasi web CRUD sederhana berbasis Laravel untuk:
 - Alokasi aset ke karyawan.
 - Master data: Departemen dan Karyawan.
 - Riwayat pemakaian aset (history).
+- **Manajemen komponen (part)**: CPU, RAM, storage, GPU, motherboard, PSU, casing, monitor,
+  keyboard, mouse — sebagai aset tersendiri yang bisa dipasang/dilepas dan dilacak
+  perpindahannya antarmesin. Lihat [14-manajemen-komponen.md](14-manajemen-komponen.md).
 
-### Tidak Termasuk (Out of Scope) — MVP
+### Tidak Termasuk (Out of Scope)
 
 - Ticketing / perbaikan.
 - Depresiasi harga & akuntansi.
-- Pencatatan aksesori / consumables (tinta printer, mouse, kabel, dsb).
+- Pencatatan aksesori habis pakai / consumables (tinta printer, kabel, thermal paste).
+- Validasi kompatibilitas komponen otomatis (DDR4 vs DDR5, socket CPU).
+- Barcode/QR label komponen.
 - Integrasi jaringan otomatis (scanning network).
 - Multi-cabang / multi-tenant.
+
+> **Catatan revisi.** Awalnya komponen hanya dicatat sebagai field spesifikasi
+> (tidak dilacak perpindahannya). Lingkup diperluas agar komponen menjadi aset
+> tersendiri dengan riwayat pemasangan. Rasionalnya di
+> [06-manajemen-aset.md](06-manajemen-aset.md) §11.
 
 ## 5. Alur Bisnis Utama
 
@@ -76,6 +86,11 @@ flowchart LR
 | MAC Address | Alamat fisik network interface, harus unik |
 | IP Address | Alamat jaringan, opsional tetapi unik jika diisi |
 | NIP | Nomor Induk Pegawai |
+| Host | Aset PC/Laptop sebagai tempat komponen dipasang |
+| Komponen | Part fisik (RAM, GPU, monitor, …) yang menjadi aset tersendiri |
+| Pemasangan | Rekaman komponen terpasang pada sebuah host untuk rentang waktu tertentu |
+| In Stock | Komponen ada di gudang IT, belum terpasang |
+| Installed | Komponen sedang terpasang di sebuah host |
 
 ## 8. Referensi
 

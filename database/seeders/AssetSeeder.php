@@ -8,7 +8,7 @@ use App\Models\Asset;
 use App\Models\AssetAssignment;
 use App\Models\Employee;
 use App\Models\User;
-use App\Services\AssetCodeGenerator;
+use App\Services\CodeGenerator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Data aset contoh untuk development.
  *
- * Kode aset tetap dibuat lewat AssetCodeGenerator (bukan ditulis manual) agar
+ * Kode aset tetap dibuat lewat CodeGenerator (bukan ditulis manual) agar
  * seeder menghasilkan data yang sama seperti alur aplikasi sebenarnya.
  *
  * Idempoten: kunci alami adalah `mac_address`. Menjalankan ulang tidak
@@ -31,6 +31,7 @@ class AssetSeeder extends Seeder
      *
      * Urutan: type, brand, hostname, mac, ip, specs, status, holderNip
      * holderNip null = belum dipegang siapa pun.
+     * `specs` host hanya menyimpan OS (Fase 2); part fisik ada di ComponentSeeder.
      */
     private const ASSETS = [
         // --- PC ---
@@ -167,7 +168,7 @@ class AssetSeeder extends Seeder
             return;
         }
 
-        $generator = app(AssetCodeGenerator::class);
+        $generator = app(CodeGenerator::class);
         $adminId = User::query()->value('id');
 
         // 1. Buat seluruh aset lebih dulu (tanpa penugasan).
@@ -184,7 +185,7 @@ class AssetSeeder extends Seeder
                     'hostname' => strtolower($hostname),
                     'mac_address' => $mac,
                     'ip_address' => $ip,
-                    'specs' => $specs,
+                    'specs' => ['os' => $specs['os'] ?? 'Windows 11 Pro 64-bit'],
                     'status' => $status,
                     'created_by' => $adminId,
                 ]));
