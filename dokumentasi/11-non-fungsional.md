@@ -24,6 +24,7 @@ Antarmuka memakai **layout sidebar admin** yang rapi dan sederhana:
 | Sudut | Kartu & tombol `rounded-xl` / `rounded-lg` |
 | Tipografi | Figtree; judul halaman `text-lg font-semibold` |
 | Ikon | Heroicons outline (inline SVG) — tanpa dependensi ikon tambahan |
+| Logo brand | `public/images/logo.png` (PNG 200×200, RGBA). Dipakai di sidebar dan halaman login lewat `asset('images/logo.png')` |
 | Mode gelap | **Dimatikan** — tema selalu terang (lihat catatan di bawah) |
 
 ### Komponen Reusable

@@ -95,7 +95,8 @@ resources/views/
 ```
 
 > Komponen Breeze `nav-link`, `responsive-nav-link`, dan `application-logo`
-> dihapus karena digantikan layout sidebar dan SVG inline.
+> dihapus karena digantikan layout sidebar dan logo brand di
+> `public/images/logo.png`.
 
 ## 4. Konvensi Kode
 

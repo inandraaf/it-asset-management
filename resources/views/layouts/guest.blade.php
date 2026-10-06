@@ -17,11 +17,9 @@
             <div class="w-full sm:max-w-md">
                 {{-- Brand --}}
                 <div class="mb-8 flex flex-col items-center gap-3 text-center">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25" />
-                        </svg>
-                    </span>
+                    <img src="{{ asset('images/logo.png') }}" alt="{{ config('app.name') }}"
+                         class="h-14 w-14 rounded-xl object-contain"
+                         width="56" height="56">
                     <div>
                         <h1 class="text-xl font-semibold text-slate-900">IT Asset Management</h1>
                         <p class="mt-1 text-sm text-slate-500">{{ __('Sistem Inventaris Aset IT Internal') }}</p>

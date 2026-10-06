@@ -35,11 +35,9 @@ x-bind:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
 class="fixed inset-y-0 left-0 z-40 w-64 transform border-r border-slate-200 bg-white transition-transform duration-200 ease-in-out lg:translate-x-0">
 {{-- Brand --}}
 <div class="flex h-16 items-center gap-3 border-b border-slate-200 px-5">
-    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white">
-        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
-        </svg>
-    </span>
+    <img src="{{ asset('images/logo.png') }}" alt="{{ config('app.name') }}"
+         class="h-9 w-9 shrink-0 rounded-lg object-contain"
+         width="36" height="36">
     <div class="min-w-0">
         <p class="truncate text-sm font-semibold text-slate-900">IT Asset</p>
         <p class="truncate text-xs text-slate-500">Management</p>
