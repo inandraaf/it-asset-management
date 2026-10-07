@@ -63,7 +63,27 @@ class OutputEscapingTest extends TestCase
         $this->actingAs($this->admin())
             ->get(route('departments.index'))
             ->assertOk()
-            ->assertSee('data-confirm-name="RnD"', false);
+            // Sejak R6 konfirmasi memakai SweetAlert2 lewat atribut data-confirm.
+            ->assertSee('data-confirm="Hapus departemen RnD?"', false)
+            ->assertSee('data-confirm-button="Hapus Departemen"', false);
+    }
+
+    /**
+     * Pesan konfirmasi kini berada di atribut HTML `data-confirm`. Kutip ganda
+     * pada nama harus tetap ter-escape agar tidak bisa keluar dari atribut.
+     */
+    public function test_department_name_cannot_break_out_of_data_confirm_attribute(): void
+    {
+        Department::create(['nama_dept' => 'RnD" onmouseover="alert(1)']);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('departments.index'))
+            ->assertOk()
+            ->getContent();
+
+        // Kutip mentah tidak boleh muncul di dalam atribut data-confirm.
+        $this->assertStringNotContainsString('data-confirm="Hapus departemen RnD" onmouseover=', $html);
+        $this->assertStringContainsString('&quot;', $html);
     }
 
     /**

@@ -59,7 +59,49 @@
                         </select>
                     </div>
 
-                    <div class="flex items-end gap-2 lg:col-span-3">
+                    {{-- Kategori & Nilai WAJIB dalam satu wrapper x-data.
+                         Bila x-data dipasang pada masing-masing <div>, state tidak
+                         terbagi dan pilihan Nilai tidak pernah tersaring. --}}
+                    <div x-data="{
+                            key: @js(request('filter_key', '')),
+                            selected: @js(request('component_value', ''))
+                         }"
+                         class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-2">
+                        <div>
+                            <x-input-label for="filter_key" :value="__('Kategori Komponen')" />
+                            <select id="filter_key" name="filter_key" x-model="key"
+                                    x-on:change="selected = ''"
+                                    class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">{{ __('Semua kategori') }}</option>
+                                @foreach ($componentFilters as $filterKey => $meta)
+                                    <option value="{{ $filterKey }}" @selected(request('filter_key') === $filterKey)>{{ $meta['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <x-input-label for="component_value" :value="__('Nilai')" />
+                            {{-- Semua opsi dirender, disaring dengan :hidden.
+                                 `<template x-for>` di dalam <select> tidak didukung browser. --}}
+                            <select id="component_value" name="component_value" x-model="selected"
+                                    x-bind:disabled="! key"
+                                    class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-400">
+                                <option value="">{{ __('Semua nilai') }}</option>
+                                @foreach ($componentFilters as $filterKey => $meta)
+                                    @foreach ($meta['values'] as $value)
+                                        <option value="{{ $value }}"
+                                                :hidden="key !== @js($filterKey)"
+                                                @selected(request('filter_key') === $filterKey && request('component_value') === $value)>
+                                            {{ $value }}
+                                        </option>
+                                    @endforeach
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-slate-500" x-show="! key">{{ __('Pilih kategori lebih dulu.') }}</p>
+                        </div>
+                    </div>
+
+<div class="flex items-end gap-2">
                         <x-primary-button>
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -67,7 +109,7 @@
                             {{ __('Terapkan') }}
                         </x-primary-button>
 
-                        @if (request()->filled('q') || request()->filled('status') || request()->filled('type') || request()->filled('department_id'))
+                        @if (request()->filled('q') || request()->filled('status') || request()->filled('type') || request()->filled('department_id') || request()->filled('component_category') || request()->filled('component_value'))
                             <a href="{{ route('assets.index') }}">
                                 <x-secondary-button>{{ __('Reset') }}</x-secondary-button>
                             </a>
@@ -128,7 +170,7 @@
                                         </span>
                                     </td>
                                     <td class="px-5 py-3.5 text-xs text-slate-600">
-                                        <div class="max-w-xs truncate" title="{{ $asset->hardwareSummary(6) }}">
+                                        <div class="max-w-xs truncate" title="{{ $asset->hardwareSummaryDetailed() }}">
                                             {{ $asset->hardwareSummary() }}
                                         </div>
                                         @if ($asset->osLabel() !== '—')
@@ -145,7 +187,11 @@
                                 @if ($holder)
                                     <div class="text-sm font-medium text-slate-900">{{ $holder->nama }}</div>
                                     <div class="text-xs text-slate-500">{{ $holder->department->nama_dept }}</div>
-                                    @else
+                                @elseif ($asset->department)
+                                    {{-- Aset departemen (CCTV/Printer) tanpa PIC --}}
+                                    <div class="text-sm text-slate-700">{{ $asset->department->nama_dept }}</div>
+                                    <div class="text-xs text-slate-400">{{ __('Perangkat departemen') }}</div>
+                                @else
                                     <span class="text-sm text-slate-400">—</span>
                                 @endif
                             </td>
@@ -161,8 +207,8 @@
                                         </a>
 
                                         <form method="POST" action="{{ route('assets.destroy', $asset) }}"
-                                        data-confirm-name="{{ $asset->asset_code }}"
-                                        onsubmit="return confirm('Hapus aset ' + this.dataset.confirmName + '?')">
+                                                      data-confirm="Hapus aset {{ $asset->asset_code }}?"
+                                                      data-confirm-button="Hapus Aset">
                                         @csrf
                                         @method('delete')
                                         <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">

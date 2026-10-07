@@ -24,13 +24,13 @@ class RegistrationTest extends TestCase
     {
         $this->post('/register', [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'username' => 'testuser',
             'password' => 'password',
             'password_confirmation' => 'password',
         ])->assertNotFound();
 
         $this->assertGuest();
-        $this->assertDatabaseMissing('users', ['email' => 'test@example.com']);
+        $this->assertDatabaseMissing('users', ['username' => 'testuser']);
     }
 
     public function test_register_route_name_does_not_exist(): void

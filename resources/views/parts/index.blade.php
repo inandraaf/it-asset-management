@@ -129,8 +129,8 @@
                                                     {{ __('Edit') }}
                                                 </a>
                                                 <form method="POST" action="{{ route('components.destroy', $item) }}"
-                                                      data-confirm-name="{{ $item->component_code }}"
-                                                      onsubmit="return confirm('Hapus komponen ' + this.dataset.confirmName + '?')">
+                                                      data-confirm="Hapus komponen {{ $item->component_code }}?"
+                                                      data-confirm-button="Hapus Komponen">
                                                     @csrf
                                                     @method('delete')
                                                     <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">

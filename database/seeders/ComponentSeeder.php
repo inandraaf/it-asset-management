@@ -28,6 +28,11 @@ class ComponentSeeder extends Seeder
      * [category, brand, model, serial, specs]
      */
     public const COMPONENTS = [
+        // CPU
+        ['cpu', 'Intel', 'Core i7-11700', 'SN-CPU-0001', ['series' => 'i7-11700', 'cores' => '8', 'threads' => '16']],
+        ['cpu', 'Intel', 'Core i5-10400', 'SN-CPU-0002', ['series' => 'i5-10400', 'cores' => '6', 'threads' => '12']],
+        ['cpu', 'AMD', 'Ryzen 5 5600', 'SN-CPU-0003', ['series' => 'Ryzen 5 5600', 'cores' => '6', 'threads' => '12']],
+
         // RAM
         ['ram', 'Kingston', 'Fury Beast DDR4', 'SN-RAM-0001', ['capacity' => '8GB', 'type' => 'DDR4', 'speed' => '3200MHz', 'module' => 'DIMM']],
         ['ram', 'Kingston', 'Fury Beast DDR4', 'SN-RAM-0002', ['capacity' => '8GB', 'type' => 'DDR4', 'speed' => '3200MHz', 'module' => 'DIMM']],
@@ -43,12 +48,12 @@ class ComponentSeeder extends Seeder
         ['storage', 'Seagate', 'Barracuda', 'SN-DSK-0005', ['capacity' => '2TB', 'type' => 'HDD', 'interface' => 'SATA']],
 
         // GPU
-        ['gpu', 'NVIDIA', 'GeForce GTX 1650', 'SN-GPU-0001', ['memory' => '4GB', 'memory_type' => 'GDDR6', 'interface' => 'PCIe 3.0 x16']],
-        ['gpu', 'NVIDIA', 'GeForce RTX 3060', 'SN-GPU-0002', ['memory' => '12GB', 'memory_type' => 'GDDR6', 'interface' => 'PCIe 4.0 x16']],
+        ['gpu', 'NVIDIA', 'GeForce GTX 1650', 'SN-GPU-0001', ['model' => 'GTX 1650', 'memory' => '4GB', 'memory_type' => 'GDDR6']],
+        ['gpu', 'NVIDIA', 'GeForce RTX 3060', 'SN-GPU-0002', ['model' => 'RTX 3060', 'memory' => '12GB', 'memory_type' => 'GDDR6']],
 
         // Motherboard
-        ['motherboard', 'ASUS', 'Prime H510M-E', 'SN-MBD-0001', ['socket' => 'LGA1200', 'form_factor' => 'micro-ATX', 'chipset' => 'H510']],
-        ['motherboard', 'Gigabyte', 'B560M DS3H', 'SN-MBD-0002', ['socket' => 'LGA1200', 'form_factor' => 'micro-ATX', 'chipset' => 'B560']],
+        ['motherboard', 'ASUS', 'Prime H510M-E', 'SN-MBD-0001', ['chipset' => 'H510', 'socket' => 'LGA1200', 'form_factor' => 'micro-ATX']],
+        ['motherboard', 'Gigabyte', 'B560M DS3H', 'SN-MBD-0002', ['chipset' => 'B560', 'socket' => 'LGA1200', 'form_factor' => 'micro-ATX']],
 
         // PSU
         ['psu', 'Corsair', 'CV550', 'SN-PSU-0001', ['wattage' => '550W', 'efficiency' => '80+ Bronze', 'modular' => 'Non-modular']],
@@ -74,17 +79,26 @@ class ComponentSeeder extends Seeder
      * aplikasi (status & riwayat ikut terjaga).
      */
     private const INSTALLATIONS = [
+        // PC-RND-01: rakitan lengkap (2x8GB = total 16GB).
+        ['SN-MBD-0001', 'pc-rnd-01', '-45 days'],
+        ['SN-CPU-0001', 'pc-rnd-01', '-45 days'],
         ['SN-RAM-0001', 'pc-rnd-01', '-45 days'],
         ['SN-RAM-0002', 'pc-rnd-01', '-45 days'],
         ['SN-DSK-0001', 'pc-rnd-01', '-45 days'],
+
+        // PC-RND-02: 1x16GB + SSD + HDD (dua tipe storage).
+        ['SN-MBD-0002', 'pc-rnd-02', '-40 days'],
+        ['SN-CPU-0002', 'pc-rnd-02', '-40 days'],
         ['SN-RAM-0003', 'pc-rnd-02', '-40 days'],
         ['SN-DSK-0002', 'pc-rnd-02', '-40 days'],
+        ['SN-DSK-0005', 'pc-rnd-02', '-40 days'],
         ['SN-GPU-0002', 'pc-rnd-02', '-40 days'],
         ['SN-RAM-0004', 'pc-edp-01', '-35 days'],
         ['SN-DSK-0004', 'pc-edp-01', '-35 days'],
         ['SN-MON-0001', 'pc-edp-01', '-35 days'],
         ['SN-KBD-0001', 'pc-edp-01', '-35 days'],
         ['SN-MSE-0001', 'pc-edp-01', '-35 days'],
+        ['SN-CPU-0003', 'lt-rnd-01', '-30 days'],
         ['SN-RAM-0005', 'lt-rnd-01', '-30 days'],
         ['SN-DSK-0003', 'lt-edp-01', '-30 days'],
         ['SN-MON-0002', 'pc-rnd-02', '-20 days'],

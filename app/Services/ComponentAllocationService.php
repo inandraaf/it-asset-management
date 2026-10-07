@@ -33,7 +33,7 @@ class ComponentAllocationService
 
             if ($locked->status !== ComponentStatus::InStock) {
                 throw ValidationException::withMessages([
-                    'component_id' => 'Komponen tidak tersedia untuk dipasang (status saat ini: '.$locked->status->value.').',
+                    'component_id' => 'Komponen tidak tersedia untuk dipasang (status saat ini: '.$locked->status->label().').',
                 ]);
             }
 
@@ -134,6 +134,71 @@ class ComponentAllocationService
             $this->remove($current, $date, 'Dipindahkan ke host lain');
 
             return $this->install($component, $target, $date, $notes);
+        });
+    }
+
+    /**
+     * Pasang BANYAK komponen ke satu host dalam satu transaksi.
+     *
+     * Bila satu komponen gagal divalidasi, seluruh batch dibatalkan sehingga
+     * tidak ada pemasangan parsial.
+     *
+     * @param  array<int, int>  $componentIds
+     * @return array<int, ComponentInstallation>
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md FB-6
+     */
+    public function installMany(Asset $asset, array $componentIds, CarbonInterface $date, ?string $notes = null): array
+    {
+        return DB::transaction(function () use ($asset, $componentIds, $date, $notes) {
+            $installations = [];
+
+            foreach (array_unique($componentIds) as $componentId) {
+                $component = Component::findOrFail($componentId);
+                $installations[] = $this->install($component, $asset, $date, $notes);
+            }
+
+            return $installations;
+        });
+    }
+
+    /**
+     * Lepas BANYAK komponen dari host dalam satu transaksi.
+     *
+     * @param  array<int, int>  $installationIds
+     * @return array<int, ComponentInstallation>
+     */
+    public function removeMany(array $installationIds, CarbonInterface $date, ?string $notes = null): array
+    {
+        return DB::transaction(function () use ($installationIds, $date, $notes) {
+            $removed = [];
+
+            foreach (array_unique($installationIds) as $installationId) {
+                $installation = ComponentInstallation::findOrFail($installationId);
+                $removed[] = $this->remove($installation, $date, $notes);
+            }
+
+            return $removed;
+        });
+    }
+
+    /**
+     * Pindahkan BANYAK komponen ke satu host tujuan dalam satu transaksi.
+     *
+     * @param  array<int, int>  $componentIds
+     * @return array<int, ComponentInstallation>
+     */
+    public function moveMany(array $componentIds, Asset $target, CarbonInterface $date, ?string $notes = null): array
+    {
+        return DB::transaction(function () use ($componentIds, $target, $date, $notes) {
+            $moved = [];
+
+            foreach (array_unique($componentIds) as $componentId) {
+                $component = Component::findOrFail($componentId);
+                $moved[] = $this->move($component, $target, $date, $notes);
+            }
+
+            return $moved;
         });
     }
 

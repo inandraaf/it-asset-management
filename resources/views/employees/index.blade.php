@@ -115,8 +115,8 @@
                                 </a>
 
                                 <form method="POST" action="{{ route('employees.destroy', $employee) }}"
-                                data-confirm-name="{{ $employee->nama }}"
-                                onsubmit="return confirm('Hapus karyawan ' + this.dataset.confirmName + '?')">
+                                                      data-confirm="Hapus karyawan {{ $employee->nama }}?"
+                                                      data-confirm-button="Hapus Karyawan">
                                 @csrf
                                 @method('delete')
                                 <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">

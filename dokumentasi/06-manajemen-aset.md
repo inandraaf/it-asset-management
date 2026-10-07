@@ -5,12 +5,14 @@
 | Field | Tipe | Wajib | Aturan |
 | --- | --- | --- | --- |
 | `asset_code` | string(30) | **Otomatis** | Dibuat sistem; form tidak menerima input kode |
-| `type` | enum | Ya | `PC` atau `Laptop` |
-| `brand` | string(100) | Ya | Merek & model (Dell OptiPlex 7090, dll) |
-| `hostname` | string(63) | Tidak | Nama komputer di jaringan/Windows. Unik antar aset aktif, disimpan lowercase |
-| `mac_address` | string(17) | Ya | **Unik global**, format `AA:BB:CC:DD:EE:FF` |
+| `type` | enum | Ya | **PC / Laptop / CCTV / Printer** (Fase 3 FB-4). Hanya PC/Laptop yang bisa di-assign karyawan |
+| `brand` | string(100) | **Tidak** | Merek & model; kosong ditampilkan sebagai **"Rakitan"** (PC rakitan) |
+| `hostname` | string(63) | Tidak | Nama perangkat di jaringan/Windows. Unik antar aset aktif, disimpan lowercase |
+| `mac_address` | string(17) | **Kondisional** | Wajib untuk PC/Laptop, opsional untuk CCTV, tidak dipakai Printer |
+| `department_id` | bigint | **Kondisional** | Wajib **hanya untuk Printer**; CCTV tanpa pemilik; tidak dipakai PC/Laptop |
+| `credentials` | relasi | Tidak | Kredensial akses (**jumlah bebas**) di tabel `asset_credentials`, terenkripsi, hanya Admin IT (S5) |
 | `ip_address` | string(45) | Tidak | **Unik jika diisi**, IPv4/IPv6 valid |
-| `specs` | object | Tidak | **Fase 2:** hanya `os` (opsional). Part fisik dikelola di modul komponen |
+| `specs` | object | Tidak | **Fase 2:** hanya `os` (opsional). Ditampilkan di card Informasi Aset (T3) |
 | `status` | enum | Ya | Default `Available` |
 | `created_by` | bigint | auto | Diisi dari `auth()->id()` |
 
@@ -240,6 +242,7 @@ class Asset extends Model
 | Hostname | Kolom tersendiri (bukan bagian `specs`) karena sering dipakai untuk mencari PC. Disimpan lowercase, unik antar aset aktif, opsional. |
 | Router | `assets/create` dan `assets/trashed` dideklarasikan sebelum `{asset}`, ditambah `whereNumber('asset')`. |
 | Pencarian | Karakter `%` dan `_` di-escape agar tidak jadi wildcard tak terduga. Mencakup kode, hostname, MAC, IP, merek, dan nama pemegang. |
+| Filter komponen | Per kategori (RAM/Storage/CPU/Motherboard/GPU) dengan dropdown nilai dari data aktual. RAM memakai **akumulasi total** (R2/R3). |
 | Hapus permanen | Ditolak bila aset punya riwayat assignment (riwayat akan ikut terhapus oleh `cascadeOnDelete`). |
 
 ## 11. Keputusan: Bagaimana Part Komputer Dicatat?

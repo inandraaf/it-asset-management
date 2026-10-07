@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\AssetAssignmentController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssetCredentialController;
+use App\Http\Controllers\BulkComponentController;
 use App\Http\Controllers\ComponentController;
 use App\Http\Controllers\ComponentInstallationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -24,7 +27,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn () => redirect()->route('dashboard'));
 
 Route::get('/dashboard', DashboardController::class)
-    ->middleware(['auth', 'verified'])
+    ->middleware('auth')
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -114,11 +117,40 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('components/{component}/move', [ComponentInstallationController::class, 'move'])
         ->whereNumber('component')->name('components.move.store');
 
+    // Kredensial aset (S5) — hanya Admin IT.
+    Route::post('assets/{asset}/credentials', [AssetCredentialController::class, 'store'])
+        ->whereNumber('asset')->name('assets.credentials.store');
+    Route::put('credentials/{credential}', [AssetCredentialController::class, 'update'])
+        ->whereNumber('credential')->name('credentials.update');
+    Route::delete('credentials/{credential}', [AssetCredentialController::class, 'destroy'])
+        ->whereNumber('credential')->name('credentials.destroy');
+
+    // Manajemen akun user (S3) — hanya Admin IT.
+    Route::resource('users', UserController::class)
+        ->except(['show'])
+        ->whereNumber('user');
+
     // Pemasangan dari sisi komponen (pilih host)
     Route::get('components/{component}/install', [ComponentInstallationController::class, 'attachCreate'])
         ->whereNumber('component')->name('components.attach.create');
     Route::post('components/{component}/install', [ComponentInstallationController::class, 'attach'])
         ->whereNumber('component')->name('components.attach.store');
+
+    // Operasi komponen massal (FB-6)
+    Route::get('assets/{asset}/components/bulk-install', [BulkComponentController::class, 'installForm'])
+        ->whereNumber('asset')->name('components.bulk-install.create');
+    Route::post('assets/{asset}/components/bulk-install', [BulkComponentController::class, 'install'])
+        ->whereNumber('asset')->name('components.bulk-install.store');
+
+    Route::get('assets/{asset}/components/bulk-remove', [BulkComponentController::class, 'removeForm'])
+        ->whereNumber('asset')->name('components.bulk-remove.create');
+    Route::post('assets/{asset}/components/bulk-remove', [BulkComponentController::class, 'remove'])
+        ->whereNumber('asset')->name('components.bulk-remove.store');
+
+    Route::get('assets/{asset}/components/bulk-move', [BulkComponentController::class, 'moveForm'])
+        ->whereNumber('asset')->name('components.bulk-move.create');
+    Route::post('assets/{asset}/components/bulk-move', [BulkComponentController::class, 'move'])
+        ->whereNumber('asset')->name('components.bulk-move.store');
 });
 
 require __DIR__.'/auth.php';

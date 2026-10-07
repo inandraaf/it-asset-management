@@ -26,7 +26,7 @@
                 </div>
                 <div>
                     <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Merek') }}</dt>
-                    <dd class="mt-1 text-sm text-slate-900">{{ $asset->brand }}</dd>
+                    <dd class="mt-1 text-sm text-slate-900">{{ $asset->brandLabel() }}</dd>
                 </div>
             </dl>
         </x-card>

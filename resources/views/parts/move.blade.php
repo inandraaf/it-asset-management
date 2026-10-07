@@ -59,7 +59,7 @@
                             <option value="">{{ __('-- Pilih Host Tujuan --') }}</option>
                             @foreach ($assets as $option)
                                 <option value="{{ $option->id }}" @selected((string) old('asset_id') === (string) $option->id)>
-                                    {{ $option->asset_code }} — {{ $option->brand }}
+                                    {{ $option->asset_code }} — {{ $option->brandLabel() }}
                                 </option>
                             @endforeach
                         </select>

@@ -444,6 +444,31 @@ Semua langkah **selesai** (Fase 2):
 | L9 | Seeder komponen + penyesuaian seeder aset | ✅ |
 | L10 | Feature test (AC-5 … AC-13) + pembaruan dokumentasi | ✅ |
 
+## 17b. Perubahan Fase 3 (FB-5 & FB-6) ✅
+
+| Topik | Perubahan |
+| --- | --- |
+| **FB-5 Input disederhanakan** | `specKeys()` kini hanya field **esensial** (CPU: `series`; RAM: `capacity`,`type`; Storage: `capacity`,`type`; GPU: `model`; Motherboard: `chipset`; PSU: `wattage`). Field teknis lain pindah ke `advancedSpecKeys()` dan disembunyikan di panel "Spesifikasi lanjutan". |
+| **FB-3 Ringkasan** | `Component::essentialSummary()` menampilkan atribut teknis (mis. `8GB DDR4`), bukan merek. Ringkasan aset mengurutkan CPU → RAM → Storage → Motherboard → GPU dan menggabungkan nilai identik (`8GB DDR4 x2`). |
+| **FB-6 Operasi massal** | `ComponentAllocationService` menambah `installMany()`, `removeMany()`, `moveMany()` — semua dalam satu transaksi (gagal satu = batal semua). UI: `BulkComponentController` + 3 halaman bulk. |
+| **FB-4 Jenis aset** | Komponen **hanya** untuk PC/Laptop (`AssetType::supportsComponents()`). CCTV/Printer tidak menerima komponen. |
+
+## 17c. Input Berbasis Pilihan (S4) ✅
+
+Field yang nilainya cukup baku memakai **dropdown** (`ComponentCategory::selectOptions()`),
+mencegah salah ketik:
+
+| Kategori | Field dropdown |
+| --- | --- |
+| RAM | `capacity` (4–128GB), `type` (DDR3/4/5), `module` (DIMM/SODIMM) |
+| Storage | `capacity` (120GB–8TB), `type` (SSD/HDD/NVMe) |
+| PSU | `wattage`, `efficiency`, `modular` |
+| Monitor | `size`, `resolution`, `panel` |
+| Keyboard/Mouse | `connection` (USB/Wireless/Bluetooth/PS/2) |
+
+Field lain (CPU series, GPU model, chipset) tetap teks bebas. Dirender oleh komponen Blade
+`<x-spec-field>`, yang otomatis memilih dropdown atau input teks.
+
 ## 18. Catatan Implementasi
 
 Beberapa hal yang berbeda dari desain awal, beserta alasannya:

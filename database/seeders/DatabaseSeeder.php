@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             EmployeeSeeder::class,
             AssetSeeder::class,
             ComponentSeeder::class,
+            AssetCredentialSeeder::class,
         ]);
     }
 }

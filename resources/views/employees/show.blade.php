@@ -65,7 +65,7 @@
                                     </span>
                                 </td>
                                 <td class="whitespace-nowrap px-5 py-3.5 text-sm text-slate-600">
-                                    {{ $assignment->asset->brand }}
+                                    {{ $assignment->asset->brandLabel() }}
                                 </td>
                                 <td class="whitespace-nowrap px-5 py-3.5 text-sm text-slate-600">
                                     {{ $assignment->assigned_date->format('d M Y') }}
@@ -90,8 +90,8 @@
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Kode Aset') }}</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Assign') }}</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Return') }}</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Serahkan') }}</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Tarik Kembali') }}</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Status') }}</th>
                         </tr>
                     </thead>

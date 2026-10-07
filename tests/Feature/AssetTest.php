@@ -246,12 +246,16 @@ class AssetTest extends TestCase
         $this->assertArrayNotHasKey('os', Asset::sole()->specs);
     }
 
-    public function test_hardware_summary_is_computed_from_installed_components(): void
+    public function test_hardware_summary_shows_technical_attributes_not_brand(): void
     {
         $asset = Asset::factory()->create();
         $component = \App\Models\Component::factory()
             ->ofCategory(\App\Enums\ComponentCategory::Ram)
-            ->create(['brand' => 'Kingston', 'model' => 'Fury 16GB']);
+            ->create([
+                'brand' => 'Kingston',
+                'model' => 'Fury Beast',
+                'specs' => ['capacity' => '8GB', 'type' => 'DDR4'],
+            ]);
 
         \App\Models\ComponentInstallation::factory()->create([
             'component_id' => $component->id,
@@ -261,7 +265,33 @@ class AssetTest extends TestCase
 
         $asset->load('activeComponentInstallations.component');
 
-        $this->assertSame('Kingston Fury 16GB', $asset->hardwareSummary());
+        // FB-3: yang tampil kapasitas & tipe, bukan merek.
+        $this->assertSame('8GB DDR4', $asset->hardwareSummary());
+        $this->assertStringNotContainsString('Kingston', $asset->hardwareSummary());
+    }
+
+    public function test_hardware_summary_orders_cpu_then_ram_then_storage(): void
+    {
+        $asset = Asset::factory()->create();
+
+        $make = function (\App\Enums\ComponentCategory $category, array $specs) use ($asset) {
+            $component = \App\Models\Component::factory()->ofCategory($category)->create(['specs' => $specs]);
+
+            \App\Models\ComponentInstallation::factory()->create([
+                'component_id' => $component->id,
+                'asset_id' => $asset->id,
+                'removed_date' => null,
+            ]);
+        };
+
+        // Sengaja dibuat urutan terbalik untuk membuktikan pengurutan.
+        $make(\App\Enums\ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD']);
+        $make(\App\Enums\ComponentCategory::Ram, ['capacity' => '16GB', 'type' => 'DDR4']);
+        $make(\App\Enums\ComponentCategory::Cpu, ['series' => 'i7-11700']);
+
+        $asset->load('activeComponentInstallations.component');
+
+        $this->assertSame('i7-11700 · 16GB DDR4 · 512GB SSD', $asset->hardwareSummary());
     }
 
     public function test_hardware_summary_is_empty_without_components(): void

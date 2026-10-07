@@ -37,7 +37,7 @@ trait NormalizesComponentSpecs
 
         $rules = [];
 
-        foreach ($category->specKeys() as $key) {
+        foreach ($category->allSpecKeys() as $key) {
             $rules["specs.$key"] = ['nullable', 'string', 'max:100'];
         }
 
@@ -58,7 +58,7 @@ trait NormalizesComponentSpecs
         $input = (array) $this->input('specs', []);
         $clean = [];
 
-        foreach ($category->specKeys() as $key) {
+        foreach ($category->allSpecKeys() as $key) {
             $value = $input[$key] ?? null;
 
             if (is_string($value) && trim($value) !== '') {

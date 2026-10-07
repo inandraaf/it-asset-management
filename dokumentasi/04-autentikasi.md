@@ -21,6 +21,68 @@
 >
 > Registrasi yang terbuka pada sistem internal adalah lubang privilege escalation: siapa pun yang bisa menjangkau halaman itu dapat membuat akun sendiri.
 
+## 2b. Login Memakai Username (Fase 3, FB-1) ✅
+
+Sistem ini praktis dipakai **satu akun Admin IT**, sehingga seluruh jalur berbasis email
+dihapus dan login memakai **username**.
+
+### Yang berlaku sekarang
+
+| Aspek | Ketentuan |
+| --- | --- |
+| Identitas login | `username` (unik, lowercase, case-insensitive saat login) |
+| Kolom `email` | **Dihapus** beserta `email_verified_at` |
+| Registrasi publik | Dimatikan |
+| Lupa kata sandi | **Tidak ada** form; diganti perintah CLI |
+| Verifikasi email | **Tidak ada** (middleware `verified` dilepas dari route) |
+| Konfirmasi kata sandi | **Tidak ada** |
+
+### Route yang tersisa
+
+| Method | URI | Nama | Fungsi |
+| --- | --- | --- | --- |
+| GET | `/login` | `login` | Form login |
+| POST | `/login` | `login` | Proses login |
+| PUT | `/password` | `password.update` | Ganti kata sandi sendiri (setelah login) |
+| POST | `/logout` | `logout` | Logout |
+
+Route berikut **sengaja tidak ada** (404): `register`, `password.request`, `password.email`,
+`password.reset`, `verification.notice`, `verification.verify`, `password.confirm`.
+
+### Jika Admin IT Lupa Kata Sandi
+
+Operator dengan akses server menjalankan:
+
+```bash
+# Tanya interaktif
+php artisan user:reset-password admin
+
+# Langsung set
+php artisan user:reset-password admin --password="RahasiaBaru123"
+
+# Buat kata sandi acak kuat (ditampilkan sekali)
+php artisan user:reset-password admin --generate
+```
+
+Bila username salah, perintah menampilkan daftar username yang tersedia.
+
+> Jalur ini lebih aman daripada form reset publik: hanya bisa dijalankan oleh yang punya
+> akses ke server.
+
+## 2c. Manajemen Akun (S3) ✅
+
+Admin IT adalah **superadmin** yang mengelola akun. Halaman `/users` (hanya admin):
+
+- CRUD user dengan role **Admin IT** atau **Viewer** (read-only).
+- Viewer tidak dapat mengakses halaman ini (403).
+- Reset kata sandi user; kosongkan bila tidak ingin mengubah.
+- **Tidak dapat menghapus akun sendiri.**
+- **Tidak dapat menghapus Admin IT terakhir** (sistem tidak boleh terkunci).
+- Menghapus user tidak menghapus aset/riwayat; kolom audit dikosongkan.
+
+> Tujuan: bila Admin IT tidak tersedia, anggota tim EDP lain yang diberi akses dapat
+> memantau aset.
+
 ## 3. Role
 
 Role disimpan di kolom `users.role` dengan nilai `admin` atau `viewer`. **Default kolom adalah `viewer`** (least privilege).
@@ -131,7 +193,7 @@ if ($adminPassword === '') {
 }
 
 $admin = User::updateOrCreate(
-    ['email' => 'admin@example.com'],
+    ['username' => 'admin'],
     ['name' => 'Admin IT', 'password' => Hash::make($adminPassword), 'email_verified_at' => now()],
 );
 $admin->assignRole(UserRole::Admin);
@@ -154,8 +216,8 @@ if ($viewerPassword === '') {
 
 | Akun | Env | `local` / `testing` bila env kosong | `production` / `staging` bila env kosong |
 | --- | --- | --- | --- |
-| `admin@example.com` | `SEED_ADMIN_PASSWORD` | Password acak ditampilkan di console | **Seeder berhenti dengan error** |
-| `viewer@example.com` | `SEED_VIEWER_PASSWORD` | Memakai password admin (mudah dev) | **Akun viewer tidak dibuat** |
+| `admin` (username) | `SEED_ADMIN_PASSWORD` | Password acak ditampilkan di console | **Seeder berhenti dengan error** |
+| `viewer` (username) | `SEED_VIEWER_PASSWORD` | Memakai password admin (mudah dev) | **Akun viewer tidak dibuat** |
 
 > **Kenapa viewer dipisah.** Sebelumnya kedua akun memakai satu password yang sama, sehingga checklist go-live yang hanya menyuruh mengganti password admin akan meninggalkan akun viewer dengan kredensial bersama. Sekarang di production kedua akun tidak pernah berbagi password.
 >

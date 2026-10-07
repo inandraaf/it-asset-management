@@ -2,7 +2,7 @@
     <x-slot name="header">
         <h1 class="truncate text-lg font-semibold text-slate-900">{{ __('Tambah Aset') }}</h1>
         <p class="hidden text-sm text-slate-500 sm:block">
-            {{ __('Daftarkan PC atau Laptop baru') }}
+            {{ __('Daftarkan aset baru (komputer atau perangkat departemen)') }}
         </p>
     </x-slot>
 
@@ -22,7 +22,7 @@
                 <div class="space-y-6">
                     <div>
                         <x-input-label :value="__('Jenis Aset')" />
-                        <div class="mt-2 grid grid-cols-2 gap-3">
+                        <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
                             @foreach ($types as $value => $label)
                                 <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-300 p-3 transition hover:bg-slate-50 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
                                     <input type="radio" name="type" value="{{ $value }}" required x-model="type"
@@ -45,18 +45,34 @@
 
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
-                            <x-input-label for="brand" :value="__('Merek & Model')" />
+                            <x-input-label for="brand" :value="__('Merek & Model (opsional)')" />
                             <x-text-input id="brand" name="brand" type="text" class="mt-1"
-                                          :value="old('brand')" required maxlength="100" placeholder="Dell OptiPlex 7090" />
+                                          :value="old('brand')" maxlength="100" placeholder="Dell OptiPlex 7090 / Rakitan" />
                             <x-input-error class="mt-2" :messages="$errors->get('brand')" />
                         </div>
 
                         <div>
-                            <x-input-label for="hostname" :value="__('Nama Komputer (hostname)')" />
+                            <x-input-label for="hostname" :value="__('Nama Perangkat (hostname)')" />
                             <x-text-input id="hostname" name="hostname" type="text" class="mt-1 font-mono"
-                                          :value="old('hostname')" maxlength="63" placeholder="PC-RND-01" />
-                            <p class="mt-1 text-xs text-slate-500">{{ __('Nama komputer di jaringan/Windows.') }}</p>
+                                          :value="old('hostname')" maxlength="63" placeholder="pc-rnd-01" />
+                            <p class="mt-1 text-xs text-slate-500">{{ __('Nama perangkat di jaringan/Windows.') }}</p>
                             <x-input-error class="mt-2" :messages="$errors->get('hostname')" />
+                        </div>
+
+                        {{-- Departemen: wajib untuk CCTV/Printer --}}
+                        <div x-show="! ['PC', 'Laptop'].includes(type)" x-cloak>
+                            <x-input-label for="department_id" :value="__('Departemen Pemilik')" />
+                            <select id="department_id" name="department_id"
+                                    class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">{{ __('-- Pilih Departemen --') }}</option>
+                                @foreach ($departments as $department)
+                                    <option value="{{ $department->id }}" @selected((string) old('department_id') === (string) $department->id)>
+                                        {{ $department->nama_dept }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-slate-500">{{ __('Aset ini melekat pada departemen tersebut.') }}</p>
+                            <x-input-error class="mt-2" :messages="$errors->get('department_id')" />
                         </div>
                     </div>
                 </div>
@@ -64,13 +80,17 @@
 
             <x-card :title="__('Jaringan')">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    <div>
+                    <div x-show="type !== 'Printer'" x-cloak>
                         <x-input-label for="mac_address" :value="__('MAC Address')" />
                         <x-text-input id="mac_address" name="mac_address" type="text" class="mt-1 font-mono"
-                                      :value="old('mac_address')" required maxlength="17"
-                                      placeholder="AA:BB:CC:DD:EE:FF"
+                                      :value="old('mac_address')"
+                                      x-bind:required="['PC', 'Laptop'].includes(type)"
+                                      maxlength="17" placeholder="AA:BB:CC:DD:EE:FF"
                                       x-model="mac"
                                       x-on:input="mac = formatMac($event.target.value)" />
+                        <p class="mt-1 text-xs text-slate-500">
+                            {{ __('Wajib untuk PC/Laptop; opsional untuk CCTV.') }}
+                        </p>
                         <x-input-error class="mt-2" :messages="$errors->get('mac_address')" />
                     </div>
 

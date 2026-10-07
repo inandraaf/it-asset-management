@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,14 +17,13 @@ class User extends Authenticatable
      * The attributes that are mass assignable.
      *
      * 'role' sengaja TIDAK fillable agar tidak bisa dinaikkan lewat mass
-     * assignment (mis. request registrasi). Set role hanya lewat assignRole().
+     * assignment. Set role hanya lewat assignRole().
      *
      * @var array<int, string>
      */
     protected $fillable = [
         'name',
-        'email',
-        'email_verified_at',
+        'username',
         'password',
     ];
 
@@ -45,7 +43,6 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'role' => UserRole::class,
     ];

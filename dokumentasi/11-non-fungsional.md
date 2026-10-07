@@ -20,12 +20,14 @@ Antarmuka memakai **layout sidebar admin** yang rapi dan sederhana:
 | Elemen | Keterangan |
 | --- | --- |
 | Layout | Sidebar tetap (fixed) 64 lebar di desktop; overlay + tombol hamburger di mobile |
+| Sidebar | Dikelompokkan: **Menu** (navigasi utama), **Aksi Cepat** (tambah aset/komponen), **Arsip** (data terhapus) |
 | Palet | Netral `slate`, aksen `indigo` untuk aksi utama, `rose` untuk destruktif, `emerald`/`amber`/`blue` untuk status |
 | Sudut | Kartu & tombol `rounded-xl` / `rounded-lg` |
 | Tipografi | Figtree; judul halaman `text-lg font-semibold` |
 | Ikon | Heroicons outline (inline SVG) — tanpa dependensi ikon tambahan |
 | Logo brand | `public/images/logo.png` (PNG 200×200, RGBA). Dipakai di sidebar dan halaman login lewat `asset('images/logo.png')` |
 | Mode gelap | **Dimatikan** — tema selalu terang (lihat catatan di bawah) |
+| Grafik | **Chart.js v4** (di-bundle lewat Vite, bukan CDN). Controller (`DoughnutController`, `BarController`) **wajib didaftarkan** — jika tidak, chart gagal render |
 
 ### Komponen Reusable
 
@@ -47,7 +49,7 @@ Antarmuka memakai **layout sidebar admin** yang rapi dan sederhana:
 - **Konsisten**: semua halaman memakai komponen di atas; tidak ada warna `gray-` (memakai `slate-`).
 - **Navigasi sadar-role**: menu "Kelola" (Tambah Aset, Aset Terhapus) hanya tampil untuk Admin IT. Menyembunyikan menu **bukan** pengamanan — middleware `role:admin` tetap wajib.
 - **Feedback** setiap aksi: flash message sukses (emerald) dan error (rose) di bawah top bar.
-- **Konfirmasi hapus** memakai `confirm()` dengan nama dibaca dari atribut `data-*` (bukan diinterpolasi ke string JS — mencegah XSS, lihat [OutputEscapingTest](../tests/Feature/OutputEscapingTest.php)).
+- **Konfirmasi hapus** memakai **SweetAlert2** lewat delegasi global pada `<form data-confirm="...">`. Teks dikirim via opsi `text:` (bukan `html:`), dan nilai Blade tetap ter-escape di atribut HTML — aman dari XSS. Lihat [OutputEscapingTest](../tests/Feature/OutputEscapingTest.php).
 - **Alpine + data user**: jangan pernah menaruh output Blade di dalam atribut `x-data`/`x-bind`. `{{ }}` meng-escape `'` menjadi `&#039;`, tetapi HTML parser men-decode-nya kembali **sebelum** Alpine mengevaluasi atribut sebagai JavaScript — sehingga string bisa ditembus (reflected XSS). Selalu pakai `@js(...)`:
   ```blade
   x-data="{ mac: @js(old('mac_address')) }"   {{-- benar --}}
@@ -55,8 +57,24 @@ Antarmuka memakai **layout sidebar admin** yang rapi dan sederhana:
   ```
 - **Aksesibilitas**: setiap input punya `<label>`; pesan error terhubung dengan `aria-describedby`; ikon dekoratif diberi `sr-only`; kontras warna memadai.
 - **Bahasa**: antarmuka berbahasa Indonesia; istilah teknis (MAC Address, IP Address, Available, Assign, Return, Transfer) tetap bahasa Inggris.
+  > **Fase 3 [FB-2](15-feedback-dan-tindak-lanjut.md):** masih ada sisa teks Inggris di halaman profil, verifikasi email, dan konfirmasi password. Akan distandarkan penuh, dan istilah teknis akan diputuskan (diterjemahkan atau tetap).
 - **State kosong**: pesan informatif + CTA, bukan tabel kosong.
 - Timezone tampilan mengikuti `APP_TIMEZONE`; format tanggal `d M Y`.
+
+### Jebakan Alpine/Chart.js yang Sudah Ditemukan
+
+| Jebakan | Akibat | Aturan |
+| --- | --- | --- |
+| `Chart` dipakai tanpa diimpor | Bundle melempar `Chart is not defined`, **seluruh JS mati** (Alpine ikut mati) | Impor `Chart` dari `chart.js` sebelum `Chart.register()` |
+| Controller Chart.js tidak didaftarkan | `"doughnut" is not a registered controller` | Daftarkan `DoughnutController`/`BarController` eksplisit |
+| `style="display:none"` inline + `x-show` | Elemen tidak pernah tampil walau state `true` | Pakai `x-cloak`, jangan `style` inline |
+| `<template x-for>` di dalam `<select>` | Opsi tidak dirender browser | Render `<option>` langsung + saring dengan `:hidden` |
+| Parent canvas tanpa `position: relative` | Chart.js responsive berukuran 0 (tampak kosong) | Beri `relative` pada wrapper canvas |
+| `backdrop-blur` pada header `sticky` | Berisiko mengganggu interaksi di sebagian browser | Hindari, atau naikkan z-index dengan benar |
+| Dua elemen Alpine yang saling bergantung diberi `x-data` masing-masing | State tidak terbagi; penyaringan tidak pernah terjadi | Bungkus elemen terkait dalam **satu** wrapper `x-data` |
+
+> Setiap jebakan di atas punya **regression test** di `tests/Feature/UiRegressionTest.php`
+> (kecuali z-index/backdrop-blur yang diperiksa secara visual).
 
 ### Catatan
 
@@ -145,6 +163,23 @@ CREATE INDEX assets_brand_trgm_idx ON assets USING gin (brand gin_trgm_ops);
 - Rate limit login sudah aktif lewat `LoginRequest` bawaan Breeze.
 - Registrasi publik dimatikan untuk sistem internal.
 - `.env` tidak masuk version control (sudah ada di `.gitignore`).
+
+### Rencana Keamanan untuk Kredensial Aset (Fase 3, [FB-8](15-feedback-dan-tindak-lanjut.md))
+
+Menyimpan **password Windows & VNC** milik pengguna adalah risiko nyata, sehingga wajib
+ditangani dalam satu paket:
+
+| Kendali | Ketentuan |
+| --- | --- |
+| **Enkripsi at-rest** | Cast `encrypted` Laravel (AES-256-CBC via `APP_KEY`) pada tabel `asset_credentials`. **Dilarang** menyimpan teks biasa |
+| **Otorisasi** | Hanya `role:admin`. Viewer tidak melihat kartu kredensial sama sekali |
+| **Tampilan** | Tertutup default (••••); dibuka dengan aksi eksplisit, bukan langsung tampil |
+| **Audit** | Catat siapa/kapan membuka atau mengubah kredensial |
+| **APP_KEY** | Wajib di-backup terpisah; kehilangannya membuat kredensial tidak bisa dibuka — lihat [13-operasional.md](13-operasional.md) §5b |
+| **Rotasi** | Bila ada perubahan `APP_KEY`, perlu prosedur dekripsi-ulang (belum disiapkan) |
+
+> **Peringatan:** bila `APP_KEY` berubah tanpa prosedur, **semua kredensial hilang permanen**.
+> Ini konsekuensi desain yang harus disadari sebelum fitur ini dipakai di produksi.
 
 ## 5. Maintenance & Kualitas Kode
 

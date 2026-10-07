@@ -270,6 +270,7 @@ Komponen (part) sebagai aset tersendiri. Desain lengkap: [14-manajemen-komponen.
 | `model` | varchar(150) | nullable | Model |
 | `serial_number` | varchar(100) | UNIQUE (parsial), nullable | Nomor seri fisik |
 | `specs` | jsonb | NOT NULL, default `{}` | Atribut khas kategori |
+| `capacity_mb` | bigint, nullable, INDEX | Kapasitas dalam MB (dari `specs.capacity`), untuk agregasi & filter. Diisi otomatis saat menyimpan |
 | `status` | varchar(20) | NOT NULL, default `In Stock` | CHECK 4 nilai |
 | `notes` | text | nullable | |
 | `created_by` | bigint | FK → `users.id`, `nullOnDelete` | |
@@ -298,7 +299,43 @@ DB::statement('CREATE UNIQUE INDEX one_active_install_per_component
     ON component_installations (component_id) WHERE removed_date IS NULL');
 ```
 
+## 5d. Tabel `asset_credentials` (Fase 3 — S5)
+
+Kredensial akses aset. Satu aset dapat punya **banyak** kredensial (mis. satu PC dengan
+akun "Admin Windows" dan "User Windows", plus "VNC").
+
+| Kolom | Tipe | Constraint | Keterangan |
+| --- | --- | --- | --- |
+| `id` | bigserial | PK | |
+| `asset_id` | bigint | FK → `assets.id`, `cascadeOnDelete` | |
+| `label` | varchar(100) | NOT NULL | Nama kredensial |
+| `username` | varchar(150) | nullable | |
+| `password` | text | nullable | **Terenkripsi** (cast `encrypted`) |
+| `notes` | text | nullable | |
+| `created_by` | bigint | FK → `users.id`, `nullOnDelete` | |
+| `created_at` / `updated_at` | timestamp | nullable | |
+
+```php
+Schema::create('asset_credentials', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('asset_id')->constrained('assets')->cascadeOnDelete();
+    $table->string('label', 100);
+    $table->string('username', 150)->nullable();
+    $table->text('password')->nullable();
+    $table->text('notes')->nullable();
+    $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+    $table->timestamps();
+    $table->index('asset_id');
+});
+```
+
+> Kolom kredensial lama pada `assets` (`windows_username`, `windows_password`,
+> `vnc_password`, `remote_notes`) **dihapus**; datanya dipindahkan ke tabel ini.
+
 ## 6. tabel `users` (modifikasi)
+
+> **Fase 3 (FB-1):** `email` dan `email_verified_at` **dihapus**; login memakai `username`.
+> Lihat [04-autentikasi.md](04-autentikasi.md) §2b.
 
 Tambahkan `role` pada migrasi users atau migrasi terpisah:
 
@@ -369,6 +406,37 @@ DB::statement("ALTER TABLE component_installations ADD CONSTRAINT component_inst
 | `component_installations` | `(component_id, removed_date)` | COMPOSITE | Riwayat pemasangan sebuah komponen |
 | `component_installations` | `component_id` WHERE `removed_date IS NULL` | UNIQUE PARTIAL | Satu komponen terpasang di satu host |
 
+## 8b. Kolom Tambahan Fase 3 (Sudah Diimplementasikan)
+
+Semua kolom di bawah **sudah diterapkan**. Lihat [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md).
+
+### Pada `assets` — kredensial & remote ([FB-8](15-feedback-dan-tindak-lanjut.md)) ✅
+
+| Kolom | Tipe | Keterangan |
+| --- | --- | --- |
+| `windows_username` | varchar(100), nullable | Akun Windows |
+| `windows_password` | text, nullable | **Ter-enkripsi** (cast `encrypted`) |
+| `vnc_password` | text, nullable | **Ter-enkripsi** (cast `encrypted`) |
+| `remote_notes` | text, nullable | Catatan remote (alamat/port, tool, dsb) |
+
+> `windows_password` & `vnc_password` masuk `$hidden` model sehingga tidak ikut serialisasi JSON.
+
+### Pada `departments` & `employees` — persiapan sinkron server ([FB-7](15-feedback-dan-tindak-lanjut.md)) ✅
+
+| Kolom | Tipe | Keterangan |
+| --- | --- | --- |
+| `external_id` | varchar(100), nullable | Kunci idempoten dari sistem sumber; UNIQUE parsial |
+| `synced_at` | timestamp, nullable | Terakhir diambil dari server |
+
+### Pada `assets` — jenis aset baru ([FB-4](15-feedback-dan-tindak-lanjut.md)) ✅
+
+| Kolom | Tipe | Keterangan |
+| --- | --- | --- |
+| `department_id` | bigint, nullable | FK → `departments`, untuk aset yang melekat departemen (CCTV/Printer) |
+
+Perubahan lain: `mac_address` menjadi **nullable**, `CHECK (type IN (...))` diperluas
+dengan `CCTV` dan `Printer`.
+
 ## 9. Urutan Migrasi
 
 1. `2014_10_12_000000_create_users_table.php` (sudah ada)
@@ -380,10 +448,20 @@ DB::statement("ALTER TABLE component_installations ADD CONSTRAINT component_inst
 7. `2026_01_01_000006_add_dashboard_indexes_to_asset_assignments_table.php`
 8. `2026_01_01_000007_add_hostname_to_assets_table.php`
 
-Fase 2 (belum diimplementasikan):
+Fase 2:
 
-9. `xxxx_create_components_table.php`
-10. `xxxx_create_component_installations_table.php`
+9. `2026_01_01_000008_create_components_table.php`
+10. `2026_01_01_000009_create_component_installations_table.php`
+
+Fase 3:
+
+11. `2026_01_01_000010_add_credentials_to_assets_table.php`
+12. `2026_01_01_000011_use_username_instead_of_email_on_users_table.php`
+13. `2026_01_01_000012_add_external_id_to_master_tables.php`
+14. `2026_01_01_000013_add_department_and_new_asset_types.php`
+15. `2026_01_01_000014_make_brand_optional_on_assets_table.php`
+16. `2026_01_01_000015_add_capacity_mb_to_components_table.php`
+17. `2026_01_01_000016_create_asset_credentials_table.php`
 
 ## 10. Cast Model (Target)
 

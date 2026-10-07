@@ -28,17 +28,14 @@ class StoreAssetRequest extends FormRequest
     {
         return [
             'type' => ['required', Rule::enum(AssetType::class)],
-            'brand' => ['required', 'string', 'min:2', 'max:100'],
+            'brand' => ['nullable', 'string', 'max:100'],
             'hostname' => [
                 'nullable', 'string', 'max:63',
                 // Format nama host: huruf/angka, boleh tanda hubung dan titik.
                 'regex:/^[A-Za-z0-9][A-Za-z0-9.\-]*$/',
                 Rule::unique('assets', 'hostname')->whereNull('deleted_at'),
             ],
-            'mac_address' => [
-                'required', 'string', new MacAddress,
-                Rule::unique('assets', 'mac_address')->whereNull('deleted_at'),
-            ],
+            ...$this->typeDependentRules(),
             'ip_address' => [
                 'nullable', 'ip', 'max:45',
                 Rule::unique('assets', 'ip_address')->whereNull('deleted_at'),
@@ -69,12 +66,49 @@ class StoreAssetRequest extends FormRequest
         return $rules;
     }
 
+    /**
+     * Aturan MAC Address & departemen yang bergantung pada jenis aset (FB-4).
+     *
+     * - PC/Laptop: MAC wajib, department_id tidak dipakai.
+     * - CCTV: MAC opsional.
+     * - Printer: MAC tidak dipakai.
+     * - CCTV/Printer: department_id wajib.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    protected function typeDependentRules(): array
+    {
+        $type = AssetType::tryFrom((string) $this->input('type'));
+
+        $rules = [
+            'department_id' => [
+                $type?->requiresDepartment() ? 'required' : 'nullable',
+                'integer', Rule::exists('departments', 'id'),
+            ],
+        ];
+
+        if ($type === null) {
+            return $rules + ['mac_address' => ['required']];
+        }
+
+        if ($type->requiresMac()) {
+            $rules['mac_address'] = ['required', 'string', new MacAddress, Rule::unique('assets', 'mac_address')->whereNull('deleted_at')];
+        } elseif ($type->allowsMac()) {
+            $rules['mac_address'] = ['nullable', 'string', new MacAddress, Rule::unique('assets', 'mac_address')->whereNull('deleted_at')];
+        } else {
+            // Printer: tidak memakai MAC.
+            $rules['mac_address'] = ['nullable'];
+        }
+
+        return $rules;
+    }
+
     protected function prepareForValidation(): void
     {
         $normalize = fn (?string $v) => ($v === null || trim($v) === '') ? null : trim($v);
 
         $this->merge([
-            'brand' => trim((string) $this->input('brand')),
+            'brand' => trim((string) $this->input('brand')) ?: null,
             'hostname' => $normalize($this->input('hostname')) === null
                 ? null
                 : strtolower($normalize($this->input('hostname'))),
@@ -111,7 +145,7 @@ class StoreAssetRequest extends FormRequest
     {
         return [
             'type.required' => 'Jenis aset wajib dipilih.',
-            'brand.required' => 'Merek wajib diisi.',
+            'brand.max' => 'Merek maksimal 100 karakter.',
             'hostname.regex' => 'Nama komputer hanya boleh huruf, angka, tanda hubung, dan titik.',
             'hostname.unique' => 'Nama komputer sudah dipakai aset lain.',
             'mac_address.required' => 'MAC Address wajib diisi.',

@@ -46,6 +46,7 @@ class Asset extends Model
         'type',
         'brand',
         'hostname',
+        'department_id',
         'mac_address',
         'ip_address',
         'specs',
@@ -84,6 +85,14 @@ class Asset extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Departemen pemilik (untuk aset departemen: CCTV/Printer).
+     */
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 
     /**
@@ -161,25 +170,119 @@ class Asset extends Model
     }
 
     /**
+     * Urutan kategori prioritas pada ringkasan perangkat keras.
+     *
+     * Urutan ini **tetap**: motherboard, CPU, RAM, storage, GPU. Bila salah
+     * satu tidak ada, baru diisi kategori lain (monitor, PSU, dsb).
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md T2
+     */
+    public const SUMMARY_CATEGORY_ORDER = [
+        'motherboard',
+        'cpu',
+        'ram',
+        'storage',
+        'gpu',
+    ];
+
+    /**
+     * Ringkasan berlabel untuk tooltip kolom spesifikasi.
+     *
+     * Berbeda dari `hardwareSummary()` (yang ringkas), versi ini menampilkan
+     * komponen dengan **nama kategorinya**, mis. "CPU: i7-11700 · RAM: 16GB DDR4".
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md R6
+     */
+    public function hardwareSummaryDetailed(): string
+    {
+        $order = self::SUMMARY_CATEGORY_ORDER;
+
+        $installation = $this->activeComponentInstallations
+            ->filter(fn (ComponentInstallation $i) => $i->component !== null)
+            ->sortBy(fn (ComponentInstallation $i) => array_search(
+                $i->component->category->value,
+                $order,
+                true
+            ) === false ? 99 : array_search($i->component->category->value, $order, true));
+
+        $parts = [];
+
+        foreach ($installation as $item) {
+            $component = $item->component;
+            $label = $component->category->label();
+            // Nilai ganda digabung: "RAM: 8GB DDR4 x2".
+            $key = $label.': '.$component->essentialSummary();
+            $parts[$key] = ($parts[$key] ?? 0) + 1;
+        }
+
+        if ($parts === []) {
+            return 'Belum ada komponen terpasang.';
+        }
+
+        return collect($parts)
+            ->map(fn (int $count, string $label) => $count > 1 ? $label.' x'.$count : $label)
+            ->implode(' · ');
+    }
+
+    /**
      * Ringkasan singkat perangkat keras untuk kolom tabel.
      *
      * Fase 2: dihitung dari **komponen terpasang**, bukan dari `specs`.
      * Memerlukan relasi `activeComponentInstallations.component` sudah dimuat.
+     *
+     * Fase 3:
+     * - **T2**: kategori prioritas tetap (motherboard, CPU, RAM, storage, GPU);
+     *   kategori lain hanya muncul bila slot masih tersisa.
+     * - **T3/FB-3**: memakai `Component::essentialSummary()` sehingga yang tampil
+     *   atribut teknis (kapasitas RAM/disk, seri CPU), bukan merek.
      */
-    public function hardwareSummary(int $limit = 3): string
+    public function hardwareSummary(int $limit = 4): string
     {
         if ($this->hasComponentSummaryOverride()) {
             return $this->componentSummaryOverride;
         }
 
-        $values = $this->activeComponentInstallations
-            ->map(fn (ComponentInstallation $i) => $i->component?->fullName())
-            ->filter()
-            ->values();
+        $installations = $this->activeComponentInstallations
+            ->filter(fn (ComponentInstallation $i) => $i->component !== null);
 
-        return $values->isEmpty()
+        // 1. Kategori prioritas, urut sesuai SUMMARY_CATEGORY_ORDER.
+        $priority = [];
+
+        foreach (self::SUMMARY_CATEGORY_ORDER as $category) {
+            $values = $installations
+                ->filter(fn (ComponentInstallation $i) => $i->component->category->value === $category)
+                ->map(fn (ComponentInstallation $i) => $i->component->essentialSummary())
+                ->filter()
+                ->values();
+
+            if ($values->isNotEmpty()) {
+                // Gabungkan nilai identik: 2 keping 8GB DDR4 → "8GB DDR4 x2".
+                $priority[] = $values->countBy()
+                    ->map(fn (int $count, string $label) => $count > 1 ? $label.' x'.$count : $label)
+                    ->values()
+                    ->implode(' + ');
+            }
+        }
+
+        // 2. Kategori lain mengisi slot yang masih tersisa.
+        $others = $installations
+            ->reject(fn (ComponentInstallation $i) => in_array(
+                $i->component->category->value,
+                self::SUMMARY_CATEGORY_ORDER,
+                true
+            ))
+            ->map(fn (ComponentInstallation $i) => $i->component->essentialSummary())
+            ->filter()
+            ->countBy()
+            ->map(fn (int $count, string $label) => $count > 1 ? $label.' x'.$count : $label)
+            ->values()
+            ->all();
+
+        $values = array_slice([...$priority, ...$others], 0, $limit);
+
+        return $values === []
             ? '—'
-            : $values->take($limit)->implode(' · ');
+            : implode(' · ', $values);
     }
 
     /**
@@ -207,13 +310,43 @@ class Asset extends Model
     }
 
     /**
+     * Merek untuk tampilan. PC rakitan sering tidak punya merek.
+     */
+    public function brandLabel(): string
+    {
+        return filled($this->brand) ? $this->brand : 'Rakitan';
+    }
+
+    /**
+     * Kredensial akses aset (Windows, VNC, dsb.) — jumlah bebas.
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md S5
+     */
+    public function credentials(): HasMany
+    {
+        return $this->hasMany(AssetCredential::class)->orderBy('label');
+    }
+
+    /**
+     * Apakah aset ini menyimpan kredensial akses.
+     */
+    public function hasCredentials(): bool
+    {
+        return $this->credentials()->exists();
+    }
+
+    /**
      * Apakah aset boleh di-assign ke karyawan.
      *
      * @see dokumentasi/07-alokasi-aset.md R1
      */
     public function isAssignable(): bool
     {
-        return $this->status->isAssignable() && ! $this->activeAssignment()->exists();
+        // Hanya PC/Laptop yang bisa ditugaskan ke karyawan. Printer melekat
+        // departemen, CCTV tanpa pemilik (tanggung jawab Admin IT).
+        return $this->type->isAssignable()
+            && $this->status->isAssignable()
+            && ! $this->activeAssignment()->exists();
     }
 
     /**

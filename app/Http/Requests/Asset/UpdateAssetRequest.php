@@ -31,11 +31,10 @@ class UpdateAssetRequest extends FormRequest
         $assetId = $this->route('asset')->id;
 
         return [
-            'brand' => ['required', 'string', 'min:2', 'max:100'],
-            'mac_address' => [
-                'required', 'string', new MacAddress,
-                Rule::unique('assets', 'mac_address')->ignore($assetId)->whereNull('deleted_at'),
-            ],
+            'brand' => ['nullable', 'string', 'max:100'],
+            'mac_address' => $this->assetIsComputer()
+                ? ['required', 'string', new MacAddress, Rule::unique('assets', 'mac_address')->ignore($assetId)->whereNull('deleted_at')]
+                : ['nullable', 'string', new MacAddress, Rule::unique('assets', 'mac_address')->ignore($assetId)->whereNull('deleted_at')],
             'ip_address' => [
                 'nullable', 'ip', 'max:45',
                 Rule::unique('assets', 'ip_address')->ignore($assetId)->whereNull('deleted_at'),
@@ -63,12 +62,20 @@ class UpdateAssetRequest extends FormRequest
         return $rules;
     }
 
+    /**
+     * Apakah aset yang sedang diedit berjenis komputer (FB-4).
+     */
+    protected function assetIsComputer(): bool
+    {
+        return $this->route('asset')?->type->isComputer() ?? true;
+    }
+
     protected function prepareForValidation(): void
     {
         $normalize = fn (?string $v) => ($v === null || trim($v) === '') ? null : trim($v);
 
         $this->merge([
-            'brand' => trim((string) $this->input('brand')),
+            'brand' => trim((string) $this->input('brand')) ?: null,
             'mac_address' => $this->filled('mac_address')
                 ? strtoupper(trim((string) $this->input('mac_address')))
                 : $this->input('mac_address'),
@@ -118,7 +125,7 @@ class UpdateAssetRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'brand.required' => 'Merek wajib diisi.',
+            'brand.max' => 'Merek maksimal 100 karakter.',
             'mac_address.required' => 'MAC Address wajib diisi.',
             'mac_address.unique' => 'MAC Address sudah dipakai aset lain.',
             'ip_address.unique' => 'IP Address sudah dipakai aset lain.',

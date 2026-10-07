@@ -9,9 +9,22 @@ enum AssetStatus: string
     case InRepair = 'In Repair';
     case Retired = 'Retired';
 
+    /**
+     * Label tampilan Bahasa Indonesia.
+     *
+     * Nilai enum tetap Inggris (dipakai di database & CHECK constraint),
+     * hanya label tampilan yang diterjemahkan.
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md FB-2
+     */
     public function label(): string
     {
-        return $this->value;
+        return match ($this) {
+            self::Available => 'Tersedia',
+            self::Assigned => 'Terpakai',
+            self::InRepair => 'Diperbaiki',
+            self::Retired => 'Dipensiunkan',
+        };
     }
 
     /**

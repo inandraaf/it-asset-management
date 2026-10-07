@@ -19,7 +19,9 @@ class AssetFactory extends Factory
      */
     public function definition(): array
     {
-        $type = fake()->randomElement(AssetType::cases());
+        // Default PC (deterministik). Tipe lain dipilih eksplisit lewat state
+        // laptop()/cctv()/printer(), sehingga test tidak bergantung kebetulan.
+        $type = AssetType::PC;
 
         return [
             'asset_code' => $type->codePrefix().'-'.now()->year.'-'
@@ -65,6 +67,30 @@ class AssetFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'type' => AssetType::Laptop,
             'asset_code' => 'LT-'.now()->year.'-'
+                .str_pad((string) fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
+        ]);
+    }
+
+    public function cctv(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => AssetType::Cctv,
+            // CCTV: MAC opsional, tanpa pemilik.
+            'mac_address' => null,
+            'hostname' => fake()->unique()->bothify('cctv-????-##'),
+            'asset_code' => 'CCTV-'.now()->year.'-'
+                .str_pad((string) fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
+        ]);
+    }
+
+    public function printer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => AssetType::Printer,
+            // Printer: tanpa MAC.
+            'mac_address' => null,
+            'hostname' => fake()->unique()->bothify('prn-????-##'),
+            'asset_code' => 'PRN-'.now()->year.'-'
                 .str_pad((string) fake()->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
         ]);
     }

@@ -35,7 +35,7 @@ class UserRoleTest extends TestCase
     {
         $user = User::create([
             'name' => 'Attacker',
-            'email' => 'attacker@example.com',
+            'username' => 'attacker',
             'password' => 'password',
             'role' => UserRole::Admin->value,
         ]);

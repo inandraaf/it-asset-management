@@ -85,8 +85,8 @@
                                         </a>
 
                                         <form method="POST" action="{{ route('departments.destroy', $department) }}"
-                                        data-confirm-name="{{ $department->nama_dept }}"
-                                        onsubmit="return confirm('Hapus departemen ' + this.dataset.confirmName + '?')">
+                                                      data-confirm="Hapus departemen {{ $department->nama_dept }}?"
+                                                      data-confirm-button="Hapus Departemen">
                                         @csrf
                                         @method('delete')
                                         <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">

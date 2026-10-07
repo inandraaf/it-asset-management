@@ -8,7 +8,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
         </a>
-        <h1 class="truncate text-lg font-semibold text-slate-900">{{ __('Transfer Aset') }}</h1>
+        <h1 class="truncate text-lg font-semibold text-slate-900">{{ __('Pindahkan Aset') }}</h1>
         <span class="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">
             {{ $asset->asset_code }}
         </span>
@@ -82,7 +82,7 @@
                         <svg class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
                         </svg>
-                        <span>{{ __('Transfer akan menutup riwayat pemegang saat ini dan membuat riwayat baru untuk karyawan tujuan.') }}</span>
+                        <span>{{ __('Pemindahan akan menutup riwayat pemegang saat ini dan membuat riwayat baru untuk karyawan tujuan.') }}</span>
                     </div>
                 </div>
             </x-card>
@@ -95,7 +95,7 @@
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                     </svg>
-                    {{ __('Transfer Aset') }}
+                    {{ __('Pindahkan Aset') }}
                 </x-primary-button>
             </div>
         </form>

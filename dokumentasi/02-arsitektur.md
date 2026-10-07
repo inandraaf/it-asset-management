@@ -39,9 +39,12 @@ app/
 │   ├── Controllers/
 │   │   ├── AssetController.php
 │   │   ├── AssetAssignmentController.php
+│   │   ├── AssetCredentialController.php        # Fase 3 (S5)
+│   │   ├── BulkComponentController.php          # Fase 3 (FB-6)
 │   │   ├── ComponentController.php              # Fase 2
 │   │   ├── ComponentInstallationController.php  # Fase 2
 │   │   ├── DashboardController.php
+│   │   ├── UserController.php                   # Fase 3 (S3)
 │   │   ├── DepartmentController.php
 │   │   └── EmployeeController.php
 │   ├── Middleware/
@@ -51,6 +54,7 @@ app/
 │       │   ├── StoreAssetRequest.php
 │       │   └── UpdateAssetRequest.php
 │       ├── Component/
+│       │   ├── BulkComponentRequest.php         # Fase 3 (FB-6)
 │       │   ├── StoreComponentRequest.php        # Fase 2
 │       │   └── UpdateComponentRequest.php       # Fase 2
 │       ├── AssignAssetRequest.php
@@ -63,6 +67,7 @@ app/
 ├── Models/
 │   ├── Asset.php
 │   ├── AssetAssignment.php
+│   ├── AssetCredential.php         # Fase 3 (S5)
 │   ├── Component.php               # Fase 2
 │   ├── ComponentInstallation.php   # Fase 2
 │   ├── Department.php
@@ -97,6 +102,11 @@ resources/views/
 │   ├── edit.blade.php
 │   ├── show.blade.php
 │   ├── install.blade.php
+│   ├── attach.blade.php
+│   ├── move.blade.php
+│   ├── bulk-install.blade.php    # Fase 3 (FB-6)
+│   ├── bulk-remove.blade.php     # Fase 3 (FB-6)
+│   ├── bulk-move.blade.php       # Fase 3 (FB-6)
 │   └── trashed.blade.php
 ├── departments/
 ├── employees/

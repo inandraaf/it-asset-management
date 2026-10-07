@@ -1,5 +1,9 @@
 # 05 — Master Data (Departemen & Karyawan)
 
+> **Fase 3 (FB-7):** tabel `departments` & `employees` memiliki kolom `external_id`
+> (unik, nullable) dan `synced_at` sebagai persiapan sinkronisasi dari server. Belum ada
+> integrasi; CRUD tetap manual. Lihat [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) FB-7.
+
 ## 1. Modul Departemen
 
 ### Field

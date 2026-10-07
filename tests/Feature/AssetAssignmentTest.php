@@ -37,14 +37,14 @@ class AssetAssignmentTest extends TestCase
 
     public function test_guest_is_redirected_to_login(): void
     {
-        $asset = Asset::factory()->create();
+        $asset = Asset::factory()->pc()->create();
 
         $this->get(route('assets.assign.create', $asset))->assertRedirect(route('login'));
     }
 
     public function test_viewer_cannot_assign_return_or_transfer(): void
     {
-        $asset = Asset::factory()->create();
+        $asset = Asset::factory()->pc()->create();
         $employee = $this->employee();
         $viewer = User::factory()->viewer()->create();
 
@@ -62,7 +62,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_admin_can_assign_available_asset_to_employee(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Available]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Available]);
         $employee = $this->employee('Budi');
         $admin = $this->admin();
 
@@ -88,7 +88,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_asset_that_is_not_available_cannot_be_assigned(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::InRepair]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::InRepair]);
         $employee = $this->employee();
 
         $this->actingAs($this->admin())
@@ -110,7 +110,7 @@ class AssetAssignmentTest extends TestCase
      */
     public function test_asset_with_active_assignment_but_available_status_cannot_be_assigned(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Available]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Available]);
         $current = $this->employee('Budi');
         $other = $this->employee('Andi');
 
@@ -139,7 +139,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_asset_with_assigned_status_cannot_be_assigned_again(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Assigned]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         $current = $this->employee('Budi');
         $other = $this->employee('Andi');
 
@@ -155,7 +155,7 @@ class AssetAssignmentTest extends TestCase
                 'assigned_date' => now()->format('Y-m-d'),
             ])
             ->assertSessionHasErrors([
-                'asset_id' => 'Aset tidak tersedia untuk di-assign (status saat ini: Assigned).',
+                'asset_id' => 'Aset tidak tersedia untuk diserahkan (status saat ini: Terpakai).',
             ]);
 
         $this->assertSame(1, AssetAssignment::where('asset_id', $asset->id)->count());
@@ -168,7 +168,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_future_assign_date_is_rejected(): void
     {
-        $asset = Asset::factory()->create();
+        $asset = Asset::factory()->pc()->create();
         $employee = $this->employee();
 
         $this->actingAs($this->admin())
@@ -183,7 +183,8 @@ class AssetAssignmentTest extends TestCase
 
     public function test_assign_form_is_reachable_for_available_asset(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Available]);
+        // Jenis dipatok: factory memilih tipe acak, dan hanya PC/Laptop yang assignable.
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Available]);
         $this->employee('Budi');
 
         $this->actingAs($this->admin())
@@ -194,7 +195,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_assign_form_redirects_for_unavailable_asset(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Retired]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Retired]);
 
         $this->actingAs($this->admin())
             ->get(route('assets.assign.create', $asset))
@@ -206,7 +207,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_return_sets_asset_available_and_closes_assignment(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Assigned]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         $employee = $this->employee('Budi');
         $assignment = AssetAssignment::factory()->create([
             'asset_id' => $asset->id,
@@ -231,7 +232,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_return_date_before_assign_date_is_rejected(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Assigned]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         $assignment = AssetAssignment::factory()->create([
             'asset_id' => $asset->id,
             'assigned_date' => now()->subDays(5)->format('Y-m-d'),
@@ -250,7 +251,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_returning_the_same_assignment_twice_is_rejected(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Assigned]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         $assignment = AssetAssignment::factory()->create([
             'asset_id' => $asset->id,
             'assigned_date' => now()->subDays(10)->format('Y-m-d'),
@@ -268,7 +269,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_history_records_previous_and_current_holder_after_reassign(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Available]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Available]);
         $budi = $this->employee('Budi');
         $andi = $this->employee('Andi');
         $admin = $this->admin();
@@ -314,7 +315,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_transfer_creates_two_history_rows_in_one_action(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Assigned]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         $budi = $this->employee('Budi');
         $andi = $this->employee('Andi');
         $admin = $this->admin();
@@ -350,7 +351,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_transfer_to_current_holder_is_rejected(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Assigned]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         $budi = $this->employee('Budi');
 
         AssetAssignment::factory()->create([
@@ -376,7 +377,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_transfer_is_rejected_when_asset_is_not_assigned(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Available]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Available]);
         $andi = $this->employee('Andi');
 
         $this->actingAs($this->admin())
@@ -391,7 +392,7 @@ class AssetAssignmentTest extends TestCase
 
     public function test_transfer_form_excludes_current_holder(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Assigned]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         $budi = $this->employee('Budi');
         $this->employee('Andi');
 
@@ -416,7 +417,7 @@ class AssetAssignmentTest extends TestCase
      */
     public function test_transfer_rolls_back_on_failure(): void
     {
-        $asset = Asset::factory()->create(['status' => AssetStatus::Assigned]);
+        $asset = Asset::factory()->pc()->create(['status' => AssetStatus::Assigned]);
         $budi = $this->employee('Budi');
 
         $assignment = AssetAssignment::factory()->create([

@@ -223,6 +223,6 @@ class ComponentInstallationController extends Controller
             return 'Komponen masih terpasang di host lain. Lakukan Lepas terlebih dahulu.';
         }
 
-        return 'Komponen tidak tersedia untuk dipasang (status saat ini: '.$component->status->value.').';
+        return 'Komponen tidak tersedia untuk dipasang (status saat ini: '.$component->status->label().').';
     }
 }

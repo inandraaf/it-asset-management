@@ -11,7 +11,12 @@ class Department extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'synced_at' => 'datetime',
+    ];
+
     protected $fillable = [
+        'external_id',
         'nama_dept',
     ];
 

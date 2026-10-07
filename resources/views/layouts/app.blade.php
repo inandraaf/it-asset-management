@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+
         <title>{{ $title ?? config('app.name', 'ITAM') }}</title>
 
         <!-- Fonts -->
@@ -19,13 +21,13 @@
             {{-- Overlay untuk sidebar mobile --}}
             <div x-show="sidebarOpen" x-cloak x-on:click="sidebarOpen = false"
             x-transition.opacity
-            class="fixed inset-0 z-30 bg-slate-900/50 lg:hidden"></div>
+            class="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"></div>
 
         @include('layouts.navigation')
 
         <div class="lg:pl-64">
             {{-- Top bar --}}
-            <header class="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-200 bg-white/90 backdrop-blur px-4 sm:px-6 lg:px-8">
+            <header class="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
                 <button type="button" x-on:click="sidebarOpen = true"
                 class="-ms-2 inline-flex items-center justify-center rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 lg:hidden">
                 <span class="sr-only">{{ __('Buka menu') }}</span>
@@ -57,7 +59,7 @@
                 <x-slot name="content">
                     <div class="border-b border-slate-100 px-4 py-3">
                         <p class="text-sm font-medium text-slate-900">{{ auth()->user()->name }}</p>
-                        <p class="truncate text-xs text-slate-500">{{ auth()->user()->email }}</p>
+                        <p class="truncate text-xs text-slate-500">{{ '@'.auth()->user()->username }}</p>
                         <span class="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
                             {{ auth()->user()->role?->label() }}
                         </span>

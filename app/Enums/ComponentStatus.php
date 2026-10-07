@@ -17,9 +17,19 @@ enum ComponentStatus: string
     case InRepair = 'In Repair';
     case Retired = 'Retired';
 
+    /**
+     * Label tampilan Bahasa Indonesia (nilai enum tetap Inggris).
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md FB-2
+     */
     public function label(): string
     {
-        return $this->value;
+        return match ($this) {
+            self::InStock => 'Di Gudang',
+            self::Installed => 'Terpasang',
+            self::InRepair => 'Diperbaiki',
+            self::Retired => 'Dipensiunkan',
+        };
     }
 
     /**

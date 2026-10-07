@@ -43,16 +43,16 @@ class ComponentFactory extends Factory
     private function specsFor(ComponentCategory $category): array
     {
         return match ($category) {
-            ComponentCategory::Cpu => ['socket' => 'LGA1200', 'cores' => '6', 'threads' => '12'],
-            ComponentCategory::Ram => ['capacity' => '8GB', 'type' => 'DDR4', 'speed' => '3200MHz'],
-            ComponentCategory::Storage => ['capacity' => '512GB', 'type' => 'SSD', 'interface' => 'NVMe'],
-            ComponentCategory::Gpu => ['memory' => '4GB', 'memory_type' => 'GDDR6'],
-            ComponentCategory::Motherboard => ['socket' => 'LGA1200', 'form_factor' => 'micro-ATX'],
-            ComponentCategory::Psu => ['wattage' => '500W', 'efficiency' => '80+ Bronze'],
-            ComponentCategory::Casing => ['form_factor' => 'ATX Mid Tower'],
-            ComponentCategory::Monitor => ['size' => '24"', 'resolution' => '1920x1080'],
+            ComponentCategory::Cpu => ['series' => 'i7-11700', 'cores' => '8'],
+            ComponentCategory::Ram => ['capacity' => '8GB', 'type' => 'DDR4'],
+            ComponentCategory::Storage => ['capacity' => '512GB', 'type' => 'SSD'],
+            ComponentCategory::Gpu => ['model' => 'RTX 3060', 'memory' => '12GB'],
+            ComponentCategory::Motherboard => ['chipset' => 'H510'],
+            ComponentCategory::Psu => ['wattage' => '500W'],
+            ComponentCategory::Casing => ['form_factor' => 'micro-ATX'],
+            ComponentCategory::Monitor => ['size' => '24"'],
             ComponentCategory::Keyboard => ['connection' => 'USB'],
-            ComponentCategory::Mouse => ['connection' => 'USB', 'dpi' => '1000'],
+            ComponentCategory::Mouse => ['connection' => 'USB'],
             ComponentCategory::Other => [],
         };
     }

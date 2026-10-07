@@ -32,6 +32,7 @@ Dokumentasi ini adalah turunan terperinci dari PRD **Sistem Manajemen Aset IT In
 | 12 | [acceptance-dan-roadmap.md](12-acceptance-dan-roadmap.md) | Kriteria penerimaan & roadmap milestone |
 | 13 | [operasional.md](13-operasional.md) | Setup, akun awal, perintah umum, backup & troubleshooting |
 | 14 | [manajemen-komponen.md](14-manajemen-komponen.md) | **Fase 2** — komponen (part) sebagai aset, riwayat pemasangan (selesai) |
+| 15 | [feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) | **Fase 3** — umpan balik pengguna & tindak lanjut (selesai) |
 
 ## Cara Memakai Dokumentasi Ini
 
@@ -72,6 +73,37 @@ untuk detail per milestone, dan [13-operasional.md](13-operasional.md) untuk car
 
 Fase 2 (AC-5 s/d AC-13) **sudah diimplementasikan**: komponen (part) menjadi aset tersendiri
 dengan riwayat pemasangan. Lihat [14-manajemen-komponen.md](14-manajemen-komponen.md).
+
+**Fase 3 (umpan balik pengguna) — SELESAI**
+
+- [x] FB-1 Login memakai username (bukan email) + perintah reset kata sandi
+- [x] FB-2 Standarisasi penuh Bahasa Indonesia (termasuk label status)
+- [x] FB-3 Ringkasan spesifikasi esensial di daftar aset
+- [x] FB-4 Jenis aset baru: CCTV & Printer
+- [x] FB-5 Generalisasi input komponen
+- [x] FB-6 Rakit aset & operasi komponen massal
+- [x] FB-7 Struktur sinkron server (external_id, synced_at)
+- [x] FB-8 Kredensial Windows & VNC per aset (terenkripsi)
+
+**Fase 3 lanjutan (temuan T1–T7) — SELESAI**
+
+- [x] T1 CCTV tanpa pemilik
+- [x] T2 Ringkasan spesifikasi tetap (motherboard, CPU, RAM, storage, GPU)
+- [x] T3 OS digabung ke Informasi Aset
+- [x] T4 Merek opsional (PC rakitan → "Rakitan")
+- [x] T5 Grafik dashboard (Chart.js)
+- [x] T6 Sidebar: Menu / Aksi Cepat / Arsip
+- [x] T7 Filter kapasitas & tipe komponen
+
+**Fase 3 lanjutan (S1–S5) — SELESAI**
+
+- [x] S1 Dashboard: kartu Total CCTV & Printer
+- [x] S2 Filter Storage: tipe + kapasitas
+- [x] S3 Manajemen akun (admin/viewer)
+- [x] S4 Input komponen berbasis pilihan (RAM/Storage/PSU/Monitor)
+- [x] S5 Kredensial jamak per aset (tabel `asset_credentials`)
+
+Rincian, analisis, dan prioritasnya di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md).
 
 ## Keputusan Desain yang Sudah Disetujui
 

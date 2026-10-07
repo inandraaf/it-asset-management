@@ -321,7 +321,8 @@ Aturan "karyawan tujuan ≠ pemegang saat ini" dan "aset harus berstatus `Assign
 | `type` | ✅ | ❌ | enum PC/Laptop | immutable saat update |
 | `brand` | ✅ | ❌ | 2–100 char | |
 | `hostname` | ❌ | ✅ bila diisi | ≤63 char, `^[A-Za-z0-9][A-Za-z0-9.\-]*$` | lowercase; unique antar baris aktif |
-| `mac_address` | ✅ | ✅ | `^([0-9A-F]{2}:){5}[0-9A-F]{2}$` | uppercase; unique antar baris aktif |
+| `mac_address` | **kondisional** | ✅ | `^([0-9A-F]{2}:){5}[0-9A-F]{2}$` | Wajib PC/Laptop; opsional CCTV; tidak dipakai Printer |
+| `department_id` | **kondisional** | ❌ | exists | Wajib untuk CCTV/Printer |
 | `ip_address` | ❌ | ✅ bila diisi | `ip` IPv4/IPv6 | blank → null; unique antar baris aktif |
 | `specs.cpu` | ✅ | ❌ | ≤100 char | komponen wajib |
 | `specs.*` (11 lainnya) | ❌ | ❌ | ≤100 char | kosong tidak disimpan |

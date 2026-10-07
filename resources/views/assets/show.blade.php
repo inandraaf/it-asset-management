@@ -12,7 +12,7 @@
         <x-status-badge :status="$asset->status" />
         </div>
         <p class="hidden text-sm text-slate-500 sm:block">
-            {{ $asset->brand }} · {{ $asset->type->label() }}
+            {{ $asset->brandLabel() }} · {{ $asset->type->label() }}
         </p>
     </x-slot>
 
@@ -31,7 +31,7 @@
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                                         </svg>
-                                        {{ __('Transfer') }}
+                                        {{ __('Pindahkan') }}
                                     </x-secondary-button>
                                 </a>
 
@@ -39,7 +39,7 @@
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
                                     </svg>
-                                    {{ __('Return') }}
+                                    {{ __('Tarik Kembali') }}
                                 </x-danger-button>
                                 @elseif ($asset->status === \App\Enums\AssetStatus::Available)
                                 <a href="{{ route('assets.assign.create', $asset) }}">
@@ -47,7 +47,7 @@
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
                                         </svg>
-                                        {{ __('Assign') }}
+                                        {{ __('Serahkan') }}
                                     </x-primary-button>
                                 </a>
                             @endif
@@ -131,10 +131,11 @@
                 @php
                     $info = [
                         ['label' => __('Jenis'), 'value' => $asset->type->label()],
-                        ['label' => __('Merek & Model'), 'value' => $asset->brand],
+                        ['label' => __('Merek & Model'), 'value' => $asset->brandLabel()],
                         ['label' => __('Nama Komputer'), 'value' => $asset->hostname ?? '—', 'mono' => true],
                         ['label' => __('MAC Address'), 'value' => $asset->mac_address, 'mono' => true],
                         ['label' => __('IP Address'), 'value' => $asset->ip_address ?? '—', 'mono' => true],
+                        ['label' => __('Sistem Operasi'), 'value' => $asset->osLabel()],
                         ['label' => __('Dicatat oleh'), 'value' => $asset->creator?->name ?? '—'],
                     ];
                 @endphp
@@ -150,30 +151,135 @@
             </dl>
         </x-card>
 
-        {{-- Spesifikasi --}}
-        <x-card :title="__('Sistem Operasi')">
-            @php($specs = $asset->filledSpecs())
+        {{-- Kredensial & akses remote (S5) — hanya Admin IT --}}
+        @if (auth()->user()->isAdmin())
+            <x-card :title="__('Akses Remote & Kredensial')"
+                    :description="__('Satu aset dapat memiliki beberapa akun (mis. Admin, User Biasa, VNC).')"
+                    :padded="false"
+                    x-data="{ showSecrets: false, showAdd: false }">
+                <x-slot name="actions">
+                    <x-secondary-button type="button" x-on:click="showSecrets = ! showSecrets">
+                        <span x-text="showSecrets ? @js(__('Sembunyikan')) : @js(__('Tampilkan'))"></span>
+                    </x-secondary-button>
+                    <x-primary-button type="button" x-on:click="showAdd = ! showAdd">
+                        {{ __('Tambah Kredensial') }}
+                    </x-primary-button>
+                </x-slot>
 
-            @if ($specs === [])
-                <p class="text-sm text-slate-500">{{ __('Belum dicatat.') }}</p>
-            @else
-                <dl class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-                    @foreach ($specs as $label => $value)
-                        <div>
-                            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ $label }}</dt>
-                            <dd class="mt-1 text-sm text-slate-900">{{ $value }}</dd>
+                @php($credentials = $asset->credentials)
+
+                <div class="p-5">
+                    @if ($credentials->isEmpty())
+                        <p class="text-sm text-slate-500">{{ __('Belum ada kredensial yang dicatat untuk aset ini.') }}</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Label') }}</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Nama Pengguna') }}</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Kata Sandi') }}</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Catatan') }}</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Aksi') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    @foreach ($credentials as $credential)
+                                        <tr class="transition hover:bg-slate-50">
+                                            <td class="whitespace-nowrap px-4 py-3.5 text-sm font-medium text-slate-900">
+                                                {{ $credential->label }}
+                                            </td>
+                                            <td class="whitespace-nowrap px-4 py-3.5 font-mono text-sm text-slate-700">
+                                                {{ $credential->username ?? '—' }}
+                                            </td>
+                                            <td class="whitespace-nowrap px-4 py-3.5">
+                                                <span x-show="! showSecrets" class="font-mono text-sm text-slate-400">••••••••</span>
+                                                <span x-show="showSecrets" x-cloak class="font-mono text-sm text-slate-900">{{ $credential->password ?? '—' }}</span>
+                                            </td>
+                                            <td class="px-4 py-3.5 text-sm text-slate-500">
+                                                {{ \Illuminate\Support\Str::limit($credential->notes, 50) ?: '—' }}
+                                            </td>
+                                            <td class="whitespace-nowrap px-4 py-3.5 text-right">
+                                                <form method="POST" action="{{ route('credentials.destroy', $credential) }}"
+                                                      data-confirm="Hapus kredensial {{ $credential->label }}?"
+                                                      data-confirm-button="Hapus Kredensial">
+                                                    @csrf
+                                                    @method('delete')
+                                                    <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">
+                                                        {{ __('Hapus') }}
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
-                    @endforeach
-                </dl>
-            @endif
-        </x-card>
+
+                        <p class="mt-3 flex items-start gap-2 text-xs text-amber-600">
+                            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                            </svg>
+                            {{ __('Informasi ini terenkripsi dan hanya untuk Admin IT. Jangan sebarkan.') }}
+                        </p>
+                    @endif
+
+                    {{-- Form tambah kredensial --}}
+                    <div x-show="showAdd" x-cloak x-transition class="mt-5 border-t border-slate-200 pt-5">
+                        <form method="POST" action="{{ route('assets.credentials.store', $asset) }}"
+                              class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            @csrf
+
+                            <div>
+                                <x-input-label for="cred_label" :value="__('Label')" />
+                                <x-text-input id="cred_label" name="label" type="text" class="mt-1"
+                                              required maxlength="100" placeholder="{{ __('Admin / User Biasa / VNC') }}" />
+                                <x-input-error class="mt-2" :messages="$errors->get('label')" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="cred_username" :value="__('Nama Pengguna (opsional)')" />
+                                <x-text-input id="cred_username" name="username" type="text" class="mt-1 font-mono" maxlength="150" />
+                                <x-input-error class="mt-2" :messages="$errors->get('username')" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="cred_password" :value="__('Kata Sandi (opsional)')" />
+                                <x-text-input id="cred_password" name="password" type="text" class="mt-1 font-mono" maxlength="255" />
+                                <x-input-error class="mt-2" :messages="$errors->get('password')" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="cred_notes" :value="__('Catatan (opsional)')" />
+                                <x-text-input id="cred_notes" name="notes" type="text" class="mt-1" maxlength="1000"
+                                              placeholder="{{ __('Alamat/port VNC, dsb.') }}" />
+                                <x-input-error class="mt-2" :messages="$errors->get('notes')" />
+                            </div>
+
+                            <div class="sm:col-span-2 flex items-center gap-3">
+                                <x-primary-button>{{ __('Simpan Kredensial') }}</x-primary-button>
+                                <x-secondary-button type="button" x-on:click="showAdd = false">{{ __('Batal') }}</x-secondary-button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </x-card>
+        @endif
 
             {{-- Komponen terpasang --}}
             <x-card :title="__('Komponen Terpasang')" :padded="false">
                 @if (auth()->user()->isAdmin())
                     <x-slot name="actions">
-                        <a href="{{ route('components.install.create', $asset) }}">
-                            <x-primary-button type="button">{{ __('Pasang Komponen') }}</x-primary-button>
+                        @if ($installedComponents->isNotEmpty())
+                            <a href="{{ route('components.bulk-move.create', $asset) }}">
+                                <x-secondary-button type="button">{{ __('Pindah Massal') }}</x-secondary-button>
+                            </a>
+                            <a href="{{ route('components.bulk-remove.create', $asset) }}">
+                                <x-secondary-button type="button">{{ __('Lepas Massal') }}</x-secondary-button>
+                            </a>
+                        @endif
+                        <a href="{{ route('components.bulk-install.create', $asset) }}">
+                            <x-primary-button type="button">{{ __('Pasang Massal') }}</x-primary-button>
                         </a>
                     </x-slot>
                 @endif
@@ -303,8 +409,8 @@
                             <thead class="bg-slate-50">
                                 <tr>
                                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Karyawan') }}</th>
-                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Assign') }}</th>
-                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Return') }}</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Serahkan') }}</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Tarik Kembali') }}</th>
                                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Durasi') }}</th>
                                     <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Catatan') }}</th>
                                 </tr>
@@ -351,8 +457,8 @@
                     </a>
 
                     <form method="POST" action="{{ route('assets.destroy', $asset) }}"
-                    data-confirm-name="{{ $asset->asset_code }}"
-                    onsubmit="return confirm('Hapus aset ' + this.dataset.confirmName + '?')">
+                                                      data-confirm="Hapus aset {{ $asset->asset_code }}?"
+                                                      data-confirm-button="Hapus Aset">
                     @csrf
                     @method('delete')
                     <x-danger-button>{{ __('Hapus Aset') }}</x-danger-button>

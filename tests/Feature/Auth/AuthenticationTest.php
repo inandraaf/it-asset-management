@@ -7,23 +7,32 @@ use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * Login memakai username (FB-1).
+ */
 class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
     public function test_login_screen_can_be_rendered(): void
     {
-        $response = $this->get('/login');
-
-        $response->assertStatus(200);
+        $this->get('/login')->assertStatus(200);
     }
 
-    public function test_users_can_authenticate_using_the_login_screen(): void
+    public function test_login_screen_asks_for_username_not_email(): void
     {
-        $user = User::factory()->create();
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('name="username"', false)
+            ->assertDontSee('name="email"', false);
+    }
+
+    public function test_users_can_authenticate_with_username(): void
+    {
+        $user = User::factory()->create(['username' => 'admin']);
 
         $response = $this->post('/login', [
-            'email' => $user->email,
+            'username' => 'admin',
             'password' => 'password',
         ]);
 
@@ -31,12 +40,24 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(RouteServiceProvider::HOME);
     }
 
-    public function test_users_can_not_authenticate_with_invalid_password(): void
+    public function test_username_is_case_insensitive_on_login(): void
     {
-        $user = User::factory()->create();
+        User::factory()->create(['username' => 'admin']);
 
         $this->post('/login', [
-            'email' => $user->email,
+            'username' => 'ADMIN',
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+    }
+
+    public function test_users_can_not_authenticate_with_invalid_password(): void
+    {
+        $user = User::factory()->create(['username' => 'admin']);
+
+        $this->post('/login', [
+            'username' => $user->username,
             'password' => 'wrong-password',
         ]);
 
@@ -51,5 +72,13 @@ class AuthenticationTest extends TestCase
 
         $this->assertGuest();
         $response->assertRedirect('/');
+    }
+
+    public function test_password_reset_and_verification_routes_do_not_exist(): void
+    {
+        // Sistem internal tanpa email: jalur ini sengaja tidak ada.
+        $this->get('/forgot-password')->assertNotFound();
+        $this->get('/verify-email')->assertNotFound();
+        $this->get('/confirm-password')->assertNotFound();
     }
 }

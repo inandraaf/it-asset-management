@@ -8,7 +8,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>
         </a>
-        <h1 class="truncate text-lg font-semibold text-slate-900">{{ __('Assign Aset') }}</h1>
+        <h1 class="truncate text-lg font-semibold text-slate-900">{{ __('Serahkan Aset') }}</h1>
         <span class="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">
             {{ $asset->asset_code }}
         </span>
@@ -22,7 +22,7 @@
                 $info = [
                     ['label' => __('Kode'), 'value' => $asset->asset_code, 'mono' => true],
                     ['label' => __('Jenis'), 'value' => $asset->type->label()],
-                    ['label' => __('Merek'), 'value' => $asset->brand],
+                    ['label' => __('Merek'), 'value' => $asset->brandLabel()],
                     ['label' => __('Spesifikasi'), 'value' => collect($asset->specs)->filter()->implode(' · ') ?: '—'],
                 ];
                 @endphp
@@ -88,7 +88,7 @@
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                     </svg>
-                    {{ __('Assign Aset') }}
+                    {{ __('Serahkan Aset') }}
                 </x-primary-button>
             </div>
         </form>

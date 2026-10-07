@@ -53,7 +53,7 @@
                         </div>
                         <div>
                             <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Merek Host') }}</dt>
-                            <dd class="mt-1 text-sm text-slate-900">{{ $currentInstallation->asset->brand }}</dd>
+                            <dd class="mt-1 text-sm text-slate-900">{{ $currentInstallation->asset->brandLabel() }}</dd>
                         </div>
                         <div>
                             <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Tanggal Pasang') }}</dt>
@@ -169,7 +169,7 @@
                                         @if ($installation->asset)
                                             <a href="{{ route('assets.show', $installation->asset) }}"
                                                class="font-mono text-sm text-indigo-600 hover:underline">{{ $installation->asset->asset_code }}</a>
-                                            <div class="text-xs text-slate-500">{{ $installation->asset->brand }}</div>
+                                            <div class="text-xs text-slate-500">{{ $installation->asset->brandLabel() }}</div>
                                         @else
                                             —
                                         @endif
@@ -212,8 +212,8 @@
                 </a>
 
                 <form method="POST" action="{{ route('components.destroy', $part) }}"
-                      data-confirm-name="{{ $part->component_code }}"
-                      onsubmit="return confirm('Hapus komponen ' + this.dataset.confirmName + '?')">
+                                                      data-confirm="Hapus komponen {{ $part->component_code }}?"
+                                                      data-confirm-button="Hapus Komponen">
                     @csrf
                     @method('delete')
                     <x-danger-button>{{ __('Hapus Komponen') }}</x-danger-button>

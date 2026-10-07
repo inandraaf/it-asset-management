@@ -45,7 +45,7 @@
                         <tr class="transition hover:bg-slate-50">
                             <td class="whitespace-nowrap px-5 py-3.5">
                                 <div class="font-mono text-sm font-medium text-slate-900">{{ $asset->asset_code }}</div>
-                                <div class="text-xs text-slate-500">{{ $asset->brand }} · {{ $asset->type->label() }}</div>
+                                <div class="text-xs text-slate-500">{{ $asset->brandLabel() }} · {{ $asset->type->label() }}</div>
                             </td>
                             <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-600">
                                 {{ $asset->mac_address }}
@@ -66,8 +66,8 @@
                                     </form>
 
                                     <form method="POST" action="{{ route('assets.force-delete', $asset->id) }}"
-                                        data-confirm-name="{{ $asset->asset_code }}"
-                                        onsubmit="return confirm('Hapus permanen aset ' + this.dataset.confirmName + '? Riwayat pemakaiannya juga akan ikut terhapus.')">
+                                                      data-confirm="Hapus permanen aset {{ $asset->asset_code }}? Riwayat pemakaiannya juga akan ikut terhapus."
+                                                      data-confirm-button="Hapus Permanen">
                                         @csrf
                                         @method('delete')
                                         <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">

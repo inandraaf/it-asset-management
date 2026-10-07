@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetStatus;
 use App\Enums\AssetType;
+use App\Enums\ComponentCategory;
 use App\Enums\ComponentStatus;
 use App\Models\Asset;
 use App\Models\AssetAssignment;
@@ -47,6 +48,8 @@ class DashboardController extends Controller
         $stats = [
             'total_pc' => $count(AssetType::PC),
             'total_laptop' => $count(AssetType::Laptop),
+            'total_cctv' => $count(AssetType::Cctv),
+            'total_printer' => $count(AssetType::Printer),
             'assigned' => $countStatus(AssetStatus::Assigned),
             'available' => $countStatus(AssetStatus::Available),
             'in_repair' => $countStatus(AssetStatus::InRepair),
@@ -75,6 +78,55 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        return view('dashboard', compact('stats', 'byDepartment', 'recentAssignments'));
+        // --- Data grafik (T5) ---
+
+        // 1. Donut: komposisi aset per jenis.
+        $byType = Asset::query()
+            ->selectRaw('type, count(*) as total')
+            ->groupBy('type')
+            ->pluck('total', 'type');
+
+        $typeChart = [
+            'labels' => collect(AssetType::cases())->map(fn (AssetType $t) => $t->label())->all(),
+            'values' => collect(AssetType::cases())->map(fn (AssetType $t) => (int) ($byType[$t->value] ?? 0))->all(),
+        ];
+
+        // 2. Donut: status aset.
+        $byStatus = Asset::query()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $statusChart = [
+            'labels' => collect(AssetStatus::cases())->map(fn (AssetStatus $s) => $s->label())->all(),
+            'values' => collect(AssetStatus::cases())->map(fn (AssetStatus $s) => (int) ($byStatus[$s->value] ?? 0))->all(),
+        ];
+
+        // 3. Bar: aset terpakai per departemen.
+        $departmentChart = [
+            'labels' => $byDepartment->pluck('nama_dept')->all(),
+            'values' => $byDepartment->pluck('assigned_assets_count')->map(fn ($v) => (int) $v)->all(),
+        ];
+
+        // 4. Bar: komposisi komponen per kategori.
+        $byCategory = Component::query()
+            ->selectRaw('category, count(*) as total')
+            ->groupBy('category')
+            ->pluck('total', 'category');
+
+        $categoryChart = [
+            'labels' => collect(ComponentCategory::cases())->map(fn (ComponentCategory $c) => $c->label())->all(),
+            'values' => collect(ComponentCategory::cases())->map(fn (ComponentCategory $c) => (int) ($byCategory[$c->value] ?? 0))->all(),
+        ];
+
+        return view('dashboard', compact(
+            'stats',
+            'byDepartment',
+            'recentAssignments',
+            'typeChart',
+            'statusChart',
+            'departmentChart',
+            'categoryChart',
+        ));
     }
 }

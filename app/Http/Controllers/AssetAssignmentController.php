@@ -48,7 +48,7 @@ class AssetAssignmentController extends Controller
         return redirect()
             ->route('assets.show', $asset)
             ->with('success', sprintf(
-                'Aset %s ditugaskan ke %s.',
+                'Aset %s diserahkan ke %s.',
                 $asset->asset_code,
                 $assignment->employee->nama
             ));
@@ -100,7 +100,7 @@ class AssetAssignmentController extends Controller
         return redirect()
             ->route('assets.show', $asset)
             ->with('success', sprintf(
-                'Aset %s ditransfer dari %s ke %s.',
+                'Aset %s dipindahkan dari %s ke %s.',
                 $asset->asset_code,
                 $previousHolder ?? '—',
                 $assignment->employee->nama
@@ -125,6 +125,6 @@ class AssetAssignmentController extends Controller
             return 'Aset masih terpasang pada karyawan lain. Lakukan Return terlebih dahulu.';
         }
 
-        return 'Aset tidak tersedia untuk di-assign (status saat ini: '.$asset->status->value.').';
+        return 'Aset tidak tersedia untuk diserahkan (status saat ini: '.$asset->status->label().').';
     }
 }

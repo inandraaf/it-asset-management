@@ -30,9 +30,17 @@ class AssetAllocationService
         return DB::transaction(function () use ($asset, $employeeId, $date, $notes) {
             $locked = Asset::whereKey($asset->getKey())->lockForUpdate()->firstOrFail();
 
+            // Hanya PC/Laptop yang dapat ditugaskan ke karyawan.
+            // Printer melekat departemen; CCTV tanpa pemilik.
+            if (! $locked->type->isAssignable()) {
+                throw ValidationException::withMessages([
+                    'asset_id' => 'Aset berjenis '.$locked->type->label().' tidak dapat ditugaskan ke karyawan.',
+                ]);
+            }
+
             if ($locked->status !== AssetStatus::Available) {
                 throw ValidationException::withMessages([
-                    'asset_id' => 'Aset tidak tersedia untuk di-assign (status saat ini: '.$locked->status->value.').',
+                    'asset_id' => 'Aset tidak tersedia untuk diserahkan (status saat ini: '.$locked->status->label().').',
                 ]);
             }
 

@@ -11,13 +11,8 @@ use Illuminate\Support\Str;
 /**
  * Akun awal untuk sistem internal.
  *
- * Password diambil dari env agar tidak ada kredensial yang ter-hardcode:
- * - SEED_ADMIN_PASSWORD untuk akun admin (wajib di non-lokal).
- * - SEED_VIEWER_PASSWORD untuk akun viewer demo.
- *
- * Di production, bila SEED_VIEWER_PASSWORD kosong, akun viewer demo TIDAK
- * dibuat — mencegah akun dengan password bersama tetap hidup. Di lokal,
- * viewer memakai password admin demi kemudahan.
+ * Login memakai USERNAME (bukan email — FB-1). Password diambil dari env
+ * SEED_ADMIN_PASSWORD agar tidak ada kredensial ter-hardcode.
  *
  * Role tidak mass-assignable; pemberiannya lewat assignRole().
  *
@@ -27,25 +22,24 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $adminPassword = (string) config('itam.seed_admin_password');
+        $password = (string) config('itam.seed_admin_password');
 
-        if ($adminPassword === '') {
+        if ($password === '') {
             if (app()->isProduction()) {
                 throw new \RuntimeException(
                     'SEED_ADMIN_PASSWORD wajib diisi di environment ini sebelum menjalankan seeder.'
                 );
             }
 
-            $adminPassword = Str::password(16);
-            $this->command?->warn('SEED_ADMIN_PASSWORD kosong. Password acak admin: '.$adminPassword);
+            $password = Str::password(16);
+            $this->command?->warn('SEED_ADMIN_PASSWORD kosong. Password acak admin: '.$password);
         }
 
         $admin = User::updateOrCreate(
-            ['email' => 'admin@example.com'],
+            ['username' => 'admin'],
             [
                 'name' => 'Admin IT',
-                'password' => Hash::make($adminPassword),
-                'email_verified_at' => now(),
+                'password' => Hash::make($password),
             ]
         );
         $admin->assignRole(UserRole::Admin);
@@ -61,16 +55,14 @@ class UserSeeder extends Seeder
                 return;
             }
 
-            // Lokal: pakai password admin agar mudah login saat development.
-            $viewerPassword = $adminPassword;
+            $viewerPassword = $password;
         }
 
         $viewer = User::updateOrCreate(
-            ['email' => 'viewer@example.com'],
+            ['username' => 'viewer'],
             [
                 'name' => 'Viewer Manager',
                 'password' => Hash::make($viewerPassword),
-                'email_verified_at' => now(),
             ]
         );
         $viewer->assignRole(UserRole::Viewer);

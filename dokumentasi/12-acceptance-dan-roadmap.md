@@ -316,6 +316,54 @@ bisa dipasang/dilepas dan dilacak perpindahannya antarmesin. Desain lengkap:
 
 **Exit criteria:** AC-13 lulus; seluruh test hijau.
 
+## 6c. Fase 3 — Tindak Lanjut Umpan Balik Pengguna ✅
+
+Umpan balik dari rekan & Admin IT sudah diidentifikasi dan **seluruhnya diimplementasikan**.
+Lihat **[15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md)**.
+
+| Item | Isi | Usaha | Prioritas | Status |
+| --- | --- | --- | --- | --- |
+| FB-1 | Login memakai **username**, bukan email | Sedang | Tinggi | ✅ |
+| FB-2 | Bahasa distandarkan **full Bahasa Indonesia** | Sedang | Tinggi | ✅ |
+| FB-3 | Ringkasan spesifikasi esensial (CPU/RAM/disk/motherboard) di daftar aset | Sedang | Tinggi | ✅ |
+| FB-4 | Jenis aset baru: **CCTV** & **Printer** (melekat departemen, bisa PIC karyawan) | Besar | Tinggi | ✅ |
+| FB-5 | **Generalisasi input komponen** (cukup seri/kapasitas/tipe) | Sedang | Tinggi | ✅ |
+| FB-6 | **Rakit aset** (komponen baru + dari gudang) & operasi **bulk** | Besar | Tinggi | ✅ |
+| FB-7 | Master data: **siapkan struktur** sinkron server (bulk dibatalkan) | Kecil | Sedang | ✅ |
+| FB-8 | **Kredensial Windows & VNC** per aset (terenkripsi, admin-only) | Sedang | Tinggi | ✅ |
+
+Urutan yang diusulkan: **FB-2 → FB-5 → FB-3 → FB-8 → FB-1 → FB-7 → FB-6 → FB-4**
+(FB-5 menjadi fondasi FB-3 dan FB-6).
+
+> Seluruh keputusan produk **sudah dijawab** — lihat
+> [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) §Keputusan Final.
+
+### Fase 3 Lanjutan — Temuan T1–T7 ✅
+
+| # | Temuan | Status |
+| --- | --- | --- |
+| T1 | CCTV tanpa pemilik (hanya Printer melekat departemen) | ✅ |
+| T2 | Ringkasan spesifikasi tetap: motherboard → CPU → RAM → storage → GPU | ✅ |
+| T3 | OS digabung ke card Informasi Aset | ✅ |
+| T4 | Merek opsional (PC rakitan → "Rakitan") | ✅ |
+| T5 | Grafik dashboard (Chart.js, di-bundle Vite) | ✅ |
+| T6 | Sidebar: Menu / Aksi Cepat / Arsip | ✅ |
+| T7 | Filter kapasitas & tipe komponen dari data aktual | ✅ |
+
+Rincian di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) §Temuan Lanjutan.
+
+### Fase 3 Lanjutan — Temuan S1–S5 ✅
+
+| # | Permintaan | Status |
+| --- | --- | --- |
+| S1 | Dashboard: kartu Total CCTV & Printer | ✅ |
+| S2 | Filter Storage: tipe **dan** kapasitas | ✅ |
+| S3 | Manajemen akun (admin IT superadmin, user read-only) | ✅ |
+| S4 | Input komponen RAM/Storage/PSU/Monitor jadi pilihan | ✅ |
+| S5 | Kredensial lebih dari satu per aset | ✅ |
+
+Rincian di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) §S1–S5.
+
 ## 7. Risiko & Mitigasi
 
 | Risiko | Dampak | Mitigasi |

@@ -63,23 +63,39 @@
             </x-card>
 
             <x-card :title="__('Spesifikasi')"
-                    :description="__('Field menyesuaikan kategori yang dipilih.')">
+                    :description="__('Cukup isi yang penting; field lanjutan opsional.')">
                 @foreach ($specMap as $categoryValue => $meta)
                     <div x-show="category === @js($categoryValue)" x-cloak>
-                        @if (empty($meta['keys']))
+                        @if (empty($meta['keys']) && empty($meta['advanced']))
                             <p class="text-sm text-slate-500">{{ __('Tidak ada field spesifikasi khusus untuk kategori ini.') }}</p>
                         @else
                             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                 @foreach ($meta['keys'] as $key => $field)
                                     <div>
                                         <x-input-label :for="'spec_'.$key" :value="$field['label']" />
-                                        <x-text-input :id="'spec_'.$key" :name="'specs['.$key.']'" type="text" class="mt-1"
-                                                      :value="old('specs.'.$key)" maxlength="100"
-                                                      :placeholder="$field['placeholder']" />
+                                        <x-spec-field :key="$key" :field="$field" />
                                         <x-input-error class="mt-2" :messages="$errors->get('specs.'.$key)" />
                                     </div>
                                 @endforeach
                             </div>
+
+                            @if (! empty($meta['advanced']))
+                                <details class="mt-5 rounded-lg border border-slate-200">
+                                    <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                                        {{ __('Spesifikasi lanjutan (opsional)') }}
+                                    </summary>
+
+                                    <div class="grid grid-cols-1 gap-6 border-t border-slate-200 p-4 sm:grid-cols-2">
+                                        @foreach ($meta['advanced'] as $key => $field)
+                                            <div>
+                                                <x-input-label :for="'spec_'.$key" :value="$field['label']" />
+                                                <x-spec-field :key="$key" :field="$field" />
+                                                <x-input-error class="mt-2" :messages="$errors->get('specs.'.$key)" />
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </details>
+                            @endif
                         @endif
                     </div>
                 @endforeach

@@ -44,9 +44,9 @@
                     </div>
 
                     <div>
-                        <x-input-label for="brand" :value="__('Merek & Model')" />
+                        <x-input-label for="brand" :value="__('Merek & Model (opsional)')" />
                         <x-text-input id="brand" name="brand" type="text" class="mt-1"
-                                      :value="old('brand', $asset->brand)" required maxlength="100" />
+                                      :value="old('brand', $asset->brand)" maxlength="100" placeholder="Kosongkan bila rakitan" />
                         <x-input-error class="mt-2" :messages="$errors->get('brand')" />
                     </div>
                 </div>

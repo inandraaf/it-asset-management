@@ -65,10 +65,10 @@ docker exec postgres16 psql -U postgres -c "CREATE DATABASE inven_it_testing"
 
 Dibuat oleh `UserSeeder`. Password diambil dari `SEED_ADMIN_PASSWORD` (lihat [04-autentikasi.md](04-autentikasi.md) §6).
 
-| Email | Role | Akses |
+| Username | Role | Akses |
 | --- | --- | --- |
-| `admin@example.com` | Admin IT | Penuh (CRUD + assign/return/transfer) |
-| `viewer@example.com` | Viewer | Baca saja |
+| `admin` | Admin IT | Penuh (CRUD + serahkan/tarik/pindah) |
+| `viewer` | Viewer | Baca saja |
 
 > Registrasi publik **dimatikan**. Akun baru hanya dibuat oleh Admin IT.
 > Di environment non-lokal, `SEED_ADMIN_PASSWORD` wajib diisi; bila kosong seeder berhenti dengan error.
@@ -142,6 +142,7 @@ docker exec php81 sh -c 'cd /var/www/html/inven_it && <perintah>'
 | Daftar route + middleware | `php artisan route:list` |
 | Build asset produksi | `npm run build` |
 | Perbaiki permission | `chmod -R 775 storage bootstrap/cache` |
+| Reset kata sandi akun | `php artisan user:reset-password {username}` |
 
 ### Contoh lengkap
 
@@ -164,6 +165,25 @@ docker exec php81 sh -c 'cd /var/www/html/inven_it && ./vendor/bin/pint'
 > - Sebagai jaring pengaman, `tests/TestCase.php` menolak berjalan bila nama
 >   database tidak berakhiran `_testing`, sehingga data development tidak akan
 >   terhapus tanpa sengaja.
+
+## 5b. APP_KEY — Wajib Di-backup Terpisah
+
+> **Berlaku setelah [FB-8](15-feedback-dan-tindak-lanjut.md) dikerjakan** (kredensial Windows
+> & VNC disimpan terenkripsi).
+
+Laravel mengenkripsi data sensitif memakai `APP_KEY`. Konsekuensinya:
+
+| Kejadian | Akibat |
+| --- | --- |
+| `APP_KEY` hilang / berubah | Seluruh kredensial tersimpan **tidak bisa dibuka lagi** |
+| Backup database **tanpa** `APP_KEY` | Data kredensial ikut ter-backup tetapi tidak berguna |
+
+**Aturan:**
+
+1. **Backup `APP_KEY` secara terpisah** dan aman — jangan hanya mengandalkan `.env` di server.
+2. Jangan pernah mengganti `APP_KEY` pada sistem yang sudah berjalan.
+3. Uji restore **database + `APP_KEY` bersamaan**; restore DB saja tidak cukup.
+4. Batasi akses file `.env` hanya untuk operator yang berwenang.
 
 ## 5. Backup & Restore Database
 

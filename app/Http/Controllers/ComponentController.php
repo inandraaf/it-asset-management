@@ -178,18 +178,29 @@ class ComponentController extends Controller
         $map = [];
 
         foreach (ComponentCategory::cases() as $category) {
-            $keys = [];
+            $essential = [];
+            $advanced = [];
 
             foreach ($category->specKeys() as $key) {
-                $keys[$key] = [
+                $essential[$key] = [
                     'label' => ComponentCategory::specLabel($key),
                     'placeholder' => $category->specPlaceholders()[$key] ?? '',
+                    'options' => ComponentCategory::optionsFor($key, $category),
+                ];
+            }
+
+            foreach ($category->advancedSpecKeys() as $key) {
+                $advanced[$key] = [
+                    'label' => ComponentCategory::specLabel($key),
+                    'placeholder' => $category->specPlaceholders()[$key] ?? '',
+                    'options' => ComponentCategory::optionsFor($key, $category),
                 ];
             }
 
             $map[$category->value] = [
                 'label' => $category->label(),
-                'keys' => $keys,
+                'keys' => $essential,
+                'advanced' => $advanced,
             ];
         }
 
