@@ -130,7 +130,7 @@ Schema::create('employees', function (Blueprint $table) {
 | `id` | bigserial | PK | |
 | `asset_code` | varchar(30) | NOT NULL, UNIQUE | **Selalu dibuat sistem** (tidak diisi manual) |
 | `type` | varchar(10) | NOT NULL, CHECK (`PC`,`Laptop`) | Jenis aset |
-| `brand` | varchar(100) | NOT NULL | Merek & model, contoh: Dell OptiPlex 7090 |
+| `brand` | varchar(100) | nullable | Merek & model. **Wajib** untuk Laptop/CCTV/Printer; opsional untuk PC rakitan |
 | `hostname` | varchar(63) | UNIQUE (parsial), nullable | Nama komputer di jaringan/Windows, disimpan lowercase |
 | `mac_address` | varchar(17) | NOT NULL, UNIQUE | Format `AA:BB:CC:DD:EE:FF` |
 | `ip_address` | varchar(45) | UNIQUE, nullable | IPv4/IPv6, unik jika diisi |

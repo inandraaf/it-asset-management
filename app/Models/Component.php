@@ -196,7 +196,8 @@ class Component extends Model
     public const FILTERS = [
         'ram' => ['category' => 'ram', 'attribute' => null, 'label' => 'RAM (Total)'],
         'storage_type' => ['category' => 'storage', 'attribute' => 'type', 'label' => 'Storage — Tipe'],
-        'storage_capacity' => ['category' => 'storage', 'attribute' => null, 'label' => 'Storage — Kapasitas'],
+        'storage_capacity' => ['category' => 'storage', 'attribute' => null, 'label' => 'Storage — Kapasitas per Keping'],
+        'storage_capacity_total' => ['category' => 'storage', 'attribute' => null, 'label' => 'Storage — Kapasitas Total', 'aggregate' => true],
         'cpu' => ['category' => 'cpu', 'attribute' => 'series', 'label' => 'CPU'],
         'motherboard' => ['category' => 'motherboard', 'attribute' => 'chipset', 'label' => 'Motherboard'],
         'gpu' => ['category' => 'gpu', 'attribute' => 'model', 'label' => 'GPU'],
@@ -213,7 +214,7 @@ class Component extends Model
 
         foreach (self::FILTERS as $key => $def) {
             $values = $def['attribute'] === null
-                ? static::capacityFilterValues($def['category'])
+                ? static::capacityFilterValues($def['category'], $def['aggregate'] ?? false)
                 : static::attributeFilterValues($def['category'], $def['attribute']);
 
             if ($values !== []) {
@@ -255,10 +256,16 @@ class Component extends Model
      *
      * @return array<int, string>
      */
-    private static function capacityFilterValues(string $category): array
+    private static function capacityFilterValues(string $category, bool $aggregate = false): array
     {
+        // RAM selalu memakai akumulasi total (1x16GB = 2x8GB).
         if ($category === ComponentCategory::Ram->value) {
             return static::ramTotalOptions();
+        }
+
+        // Storage mode agregat: total per aset (SSD 512GB + HDD 1TB = 1.5TB).
+        if ($aggregate) {
+            return static::storageTotalOptions();
         }
 
         $rows = static::query()
@@ -288,6 +295,32 @@ class Component extends Model
             ->whereNull('i.removed_date')
             ->whereNull('c.deleted_at')
             ->where('c.category', ComponentCategory::Ram->value)
+            ->whereNotNull('c.capacity_mb')
+            ->groupBy('i.asset_id')
+            ->selectRaw('SUM(c.capacity_mb) AS total_mb')
+            ->pluck('total_mb');
+
+        return $rows
+            ->map(fn ($mb) => self::formatCapacityMb((int) $mb))
+            ->filter()
+            ->unique()
+            ->sortBy(fn (string $label) => (int) self::parseCapacityMb($label))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Total storage unik per aset (SSD + HDD dijumlahkan).
+     *
+     * @return array<int, string>
+     */
+    public static function storageTotalOptions(): array
+    {
+        $rows = DB::table('component_installations as i')
+            ->join('components as c', 'c.id', '=', 'i.component_id')
+            ->whereNull('i.removed_date')
+            ->whereNull('c.deleted_at')
+            ->where('c.category', ComponentCategory::Storage->value)
             ->whereNotNull('c.capacity_mb')
             ->groupBy('i.asset_id')
             ->selectRaw('SUM(c.capacity_mb) AS total_mb')

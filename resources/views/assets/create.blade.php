@@ -45,9 +45,13 @@
 
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
-                            <x-input-label for="brand" :value="__('Merek & Model (opsional)')" />
+                            {{-- PC opsional (banyak rakitan); Laptop/CCTV/Printer wajib. --}}
+                            <x-input-label for="brand" :value="__('Merek & Model')" />
                             <x-text-input id="brand" name="brand" type="text" class="mt-1"
-                                          :value="old('brand')" maxlength="100" placeholder="Dell OptiPlex 7090 / Rakitan" />
+                                          :value="old('brand')" maxlength="100"
+                                          x-bind:required="type !== 'PC'"
+                                          placeholder="{{ __('Dell OptiPlex 7090 / Rakitan') }}" />
+                            <p class="mt-1 text-xs text-slate-500" x-show="type === 'PC'">{{ __('Opsional untuk PC rakitan.') }}</p>
                             <x-input-error class="mt-2" :messages="$errors->get('brand')" />
                         </div>
 
@@ -104,6 +108,7 @@
             </x-card>
 
             <x-card :title="__('Sistem Operasi')"
+                    x-show="type === 'PC' || type === 'Laptop'" x-cloak
                     :description="__('Komponen fisik (CPU, RAM, disk, dst.) ditambahkan dari halaman detail aset setelah aset dibuat.')">
                 <div>
                     <x-input-label for="specs_os" :value="__('Sistem Operasi (opsional)')" />

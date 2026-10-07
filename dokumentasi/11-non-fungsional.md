@@ -172,7 +172,8 @@ ditangani dalam satu paket:
 | Kendali | Ketentuan |
 | --- | --- |
 | **Enkripsi at-rest** | Cast `encrypted` Laravel (AES-256-CBC via `APP_KEY`) pada tabel `asset_credentials`. **Dilarang** menyimpan teks biasa |
-| **Otorisasi** | Hanya `role:admin`. Viewer tidak melihat kartu kredensial sama sekali |
+| **Otorisasi baca** | Kartu kredensial tampil untuk **semua role** agar staf EDP yang didelegasikan dapat mengeksekusi (U2) |
+| **Otorisasi tulis** | Tombol tambah/hapus kredensial hanya untuk `role:admin` |
 | **Tampilan** | Tertutup default (••••); dibuka dengan aksi eksplisit, bukan langsung tampil |
 | **Audit** | Catat siapa/kapan membuka atau mengubah kredensial |
 | **APP_KEY** | Wajib di-backup terpisah; kehilangannya membuat kredensial tidak bisa dibuka — lihat [13-operasional.md](13-operasional.md) §5b |

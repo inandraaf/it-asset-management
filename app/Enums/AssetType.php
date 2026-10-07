@@ -79,6 +79,17 @@ enum AssetType: string
     }
 
     /**
+     * Apakah merek/model wajib diisi.
+     *
+     * PC banyak yang rakitan sehingga merek tidak selalu diketahui; Laptop,
+     * CCTV, dan Printer lazim bermerek pabrikan (U3b).
+     */
+    public function requiresBrand(): bool
+    {
+        return $this !== self::PC;
+    }
+
+    /**
      * Apakah jenis ini memerlukan MAC Address.
      *
      * - PC/Laptop: wajib

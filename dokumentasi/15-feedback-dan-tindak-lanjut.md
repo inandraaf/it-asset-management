@@ -279,6 +279,73 @@ Satu PC kini dapat menyimpan beberapa akun. Migrasi memindahkan data lama
 (`windows_username`, `windows_password`, `vnc_password`, `remote_notes`) menjadi baris
 "Windows" dan "VNC", lalu kolom lama dihapus.
 
+### U1–U4 — Umpan Balik Lanjutan (Kedua)
+
+| # | Permintaan | Perbaikan | Status |
+| --- | --- | --- | --- |
+| **U1** | Storage: satu PC bisa SSD **dan** HDD — filter kapasitasnya bagaimana? | Filter kapasitas storage dipisah menjadi **per keping** dan **total** | ✅ |
+| **U2** | Staf/karyawan juga perlu melihat kredensial | Kredensial terbuka untuk semua role (viewer), tanpa tombol tulis | ✅ |
+| **U3a** | CCTV/Printer masih menampilkan bagian khusus komputer | Pemegang, OS, nama komputer, komponen, kredensial, riwayat disembunyikan | ✅ |
+| **U3b** | Merek kosong jadi "Rakitan" di CCTV/Printer | Merek **wajib** untuk Laptop/CCTV/Printer; **opsional** hanya untuk PC | ✅ |
+| **U3c** | Form aset: OS tidak perlu untuk CCTV/Printer | Kartu Sistem Operasi disembunyikan untuk perangkat departemen | ✅ |
+| **U4** | Bisa satu karyawan memegang lebih dari satu aset? | **Sudah bisa** — tidak ada perubahan kode | ✅ (sudah didukung) |
+
+#### U1 — Filter Kapasitas Storage
+
+Satu PC dapat memiliki **beberapa** storage (mis. SSD 512GB + HDD 1TB). Karena itu filter
+kapasitas disediakan dalam **dua mode**:
+
+| Kunci filter | Cara kerja | Contoh hasil |
+| --- | --- | --- |
+| `storage_capacity` | **Per keping** — mencari keping dengan kapasitas tersebut | SSD 512GB + HDD 1TB → cocok difilter "512GB" **dan** "1TB" |
+| `storage_capacity_total` | **Total** — menjumlahkan semua storage aset | SSD 512GB + HDD 1TB → cocok difilter "1536GB" |
+
+Keduanya tersedia sehingga admin dapat memilih sesuai kebutuhan.
+
+#### U2 — Kredensial Terbuka untuk Semua Role
+
+Alasan: bila Admin IT tidak tersedia, staf EDP yang didelegasikan harus dapat mengeksekusi
+tanpa memakai akun admin. Karena itu:
+
+- Kartu kredensial tampil untuk **semua role** (admin & viewer).
+- Tombol **Tambah** dan **Hapus** tetap **hanya admin** (viewer read-only).
+- Tombol "Tampilkan/Sembunyikan" kata sandi tersedia untuk semua.
+
+#### U3a — Bagian yang Disembunyikan untuk CCTV & Printer
+
+| Bagian | PC/Laptop | CCTV/Printer |
+| --- | --- | --- |
+| Pemegang Saat Ini | ✅ | ❌ |
+| Nama Komputer (hostname) | ✅ | ❌ |
+| Sistem Operasi | ✅ | ❌ |
+| Komponen Terpasang | ✅ | ❌ |
+| Riwayat Pemakaian | ✅ | ❌ |
+| Akses Remote & Kredensial | ✅ | ❌ (CCTV diakses lewat IP/MAC) |
+| MAC Address & IP Address | ✅ | ✅ |
+| Departemen Pemilik | — | ✅ (Printer) |
+
+#### U3b — Merek Wajib per Jenis
+
+| Jenis | Merek | Alasan |
+| --- | --- | --- |
+| PC | **Opsional** | Kebanyakan rakitan; kosong ditampilkan "Rakitan" |
+| Laptop | **Wajib** | Selalu bermerek pabrikan |
+| CCTV | **Wajib** | Selalu bermerek pabrikan |
+| Printer | **Wajib** | Selalu bermerek pabrikan |
+
+Diterapkan lewat `AssetType::requiresBrand()` pada `StoreAssetRequest` dan
+`UpdateAssetRequest`.
+
+#### U4 — Satu Karyawan, Banyak Aset
+
+**Sudah didukung tanpa perubahan kode.** Invariantnya adalah *satu aset maksimal satu
+pemegang*, bukan *satu karyawan maksimal satu aset*:
+
+- `one_active_assignment_per_asset` → UNIQUE pada `asset_id` (bukan `employee_id`).
+- Index `(employee_id, returned_date)` hanya B-tree biasa, **bukan** unique.
+
+Diverifikasi: satu karyawan dapat memegang PC **dan** Laptop sekaligus.
+
 ### T6 — Struktur Sidebar
 
 ```

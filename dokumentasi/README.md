@@ -103,6 +103,13 @@ dengan riwayat pemasangan. Lihat [14-manajemen-komponen.md](14-manajemen-kompone
 - [x] S4 Input komponen berbasis pilihan (RAM/Storage/PSU/Monitor)
 - [x] S5 Kredensial jamak per aset (tabel `asset_credentials`)
 
+**Fase 3 lanjutan (U1–U4) — SELESAI**
+
+- [x] U1 Filter storage: per keping + total
+- [x] U2 Kredensial dapat dilihat viewer (staf EDP)
+- [x] U3 CCTV/Printer: bagian komputer disembunyikan; merek wajib; OS disembunyikan di form
+- [x] U4 Konfirmasi: satu karyawan dapat memegang banyak aset (sudah didukung)
+
 Rincian, analisis, dan prioritasnya di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md).
 
 ## Keputusan Desain yang Sudah Disetujui

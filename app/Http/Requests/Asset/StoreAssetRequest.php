@@ -28,7 +28,6 @@ class StoreAssetRequest extends FormRequest
     {
         return [
             'type' => ['required', Rule::enum(AssetType::class)],
-            'brand' => ['nullable', 'string', 'max:100'],
             'hostname' => [
                 'nullable', 'string', 'max:63',
                 // Format nama host: huruf/angka, boleh tanda hubung dan titik.
@@ -81,6 +80,10 @@ class StoreAssetRequest extends FormRequest
         $type = AssetType::tryFrom((string) $this->input('type'));
 
         $rules = [
+            // Merek wajib untuk Laptop/CCTV/Printer; opsional untuk PC rakitan.
+            'brand' => $type?->requiresBrand()
+                ? ['required', 'string', 'min:2', 'max:100']
+                : ['nullable', 'string', 'max:100'],
             'department_id' => [
                 $type?->requiresDepartment() ? 'required' : 'nullable',
                 'integer', Rule::exists('departments', 'id'),
@@ -145,6 +148,7 @@ class StoreAssetRequest extends FormRequest
     {
         return [
             'type.required' => 'Jenis aset wajib dipilih.',
+            'brand.required' => 'Merek wajib diisi untuk jenis aset ini.',
             'brand.max' => 'Merek maksimal 100 karakter.',
             'hostname.regex' => 'Nama komputer hanya boleh huruf, angka, tanda hubung, dan titik.',
             'hostname.unique' => 'Nama komputer sudah dipakai aset lain.',

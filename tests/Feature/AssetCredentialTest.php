@@ -200,19 +200,41 @@ class AssetCredentialTest extends TestCase
             ->assertSee('user.local');
     }
 
-    public function test_viewer_cannot_see_credentials(): void
+    /**
+     * Viewer BOLEH melihat kredensial agar staf EDP yang didelegasikan dapat
+     * mengeksekusi saat Admin IT tidak tersedia (U2).
+     */
+    public function test_viewer_can_see_credentials(): void
     {
         $asset = Asset::factory()->create();
         AssetCredential::factory()->create([
-            'asset_id' => $asset->id, 'label' => 'RahasiaAdmin', 'password' => 'RahasiaWindows123',
+            'asset_id' => $asset->id, 'label' => 'Admin', 'username' => 'admin.local',
+            'password' => 'RahasiaWindows123',
         ]);
 
         $response = $this->actingAs(User::factory()->viewer()->create())
             ->get(route('assets.show', $asset));
 
         $response->assertOk();
-        $response->assertDontSee('Akses Remote & Kredensial');
-        $response->assertDontSee('RahasiaWindows123');
+        $response->assertSee('Akses Remote & Kredensial');
+        $response->assertSee('admin.local');
+    }
+
+    /**
+     * Namun viewer TIDAK melihat tombol tulis (tambah/hapus).
+     */
+    public function test_viewer_sees_no_write_controls_on_credentials(): void
+    {
+        $asset = Asset::factory()->create();
+        AssetCredential::factory()->create(['asset_id' => $asset->id, 'label' => 'Admin']);
+
+        $html = $this->actingAs(User::factory()->viewer()->create())
+            ->get(route('assets.show', $asset))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('Tambah Kredensial', $html);
+        $this->assertStringNotContainsString('Hapus Kredensial', $html);
     }
 
     public function test_viewer_cannot_create_or_delete_credentials(): void

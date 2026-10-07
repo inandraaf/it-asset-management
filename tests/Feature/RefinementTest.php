@@ -184,6 +184,45 @@ class RefinementTest extends TestCase
         $this->assertArrayNotHasKey('ram', $options);
     }
 
+    /**
+     * U1: selain per keping, tersedia filter kapasitas TOTAL storage
+     * (SSD 512GB + HDD 1TB = 1536GB → ditampilkan 1536GB).
+     */
+    public function test_storage_capacity_total_filter_sums_all_modules(): void
+    {
+        $mixed = Asset::factory()->create(['asset_code' => 'PC-MIXED']);
+        $only = Asset::factory()->create(['asset_code' => 'PC-ONLY512']);
+
+        // SSD 512GB + HDD 1TB = total 1536GB.
+        $this->install($mixed, ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD']);
+        $this->install($mixed, ComponentCategory::Storage, ['capacity' => '1TB', 'type' => 'HDD']);
+        $this->install($only, ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD']);
+
+        // Opsi total storage berisi 512GB (per aset) dan 1536GB (gabungan).
+        $this->assertContains('1536GB', Component::storageTotalOptions());
+        $this->assertContains('512GB', Component::storageTotalOptions());
+
+        // Filter total 1536GB hanya menemukan aset gabungan.
+        $this->actingAs($this->admin())
+            ->get(route('assets.index', ['filter_key' => 'storage_capacity_total', 'component_value' => '1536GB']))
+            ->assertOk()
+            ->assertSee('PC-MIXED')
+            ->assertDontSee('PC-ONLY512');
+    }
+
+    public function test_storage_per_module_filter_still_available(): void
+    {
+        $mixed = Asset::factory()->create(['asset_code' => 'PC-MIXED']);
+        $this->install($mixed, ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD']);
+        $this->install($mixed, ComponentCategory::Storage, ['capacity' => '1TB', 'type' => 'HDD']);
+
+        // Filter per keping: 512GB tetap menemukan aset yang punya SSD 512GB.
+        $this->actingAs($this->admin())
+            ->get(route('assets.index', ['filter_key' => 'storage_capacity', 'component_value' => '512GB']))
+            ->assertOk()
+            ->assertSee('PC-MIXED');
+    }
+
     public function test_storage_capacity_filter_matches_per_module(): void
     {
         $ssd = Asset::factory()->create(['asset_code' => 'PC-SSD512']);

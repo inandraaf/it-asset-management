@@ -31,7 +31,10 @@ class UpdateAssetRequest extends FormRequest
         $assetId = $this->route('asset')->id;
 
         return [
-            'brand' => ['nullable', 'string', 'max:100'],
+            // Merek wajib untuk Laptop/CCTV/Printer; opsional untuk PC rakitan.
+            'brand' => $this->route('asset')->type->requiresBrand()
+                ? ['required', 'string', 'min:2', 'max:100']
+                : ['nullable', 'string', 'max:100'],
             'mac_address' => $this->assetIsComputer()
                 ? ['required', 'string', new MacAddress, Rule::unique('assets', 'mac_address')->ignore($assetId)->whereNull('deleted_at')]
                 : ['nullable', 'string', new MacAddress, Rule::unique('assets', 'mac_address')->ignore($assetId)->whereNull('deleted_at')],
@@ -125,6 +128,7 @@ class UpdateAssetRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'brand.required' => 'Merek wajib diisi untuk jenis aset ini.',
             'brand.max' => 'Merek maksimal 100 karakter.',
             'mac_address.required' => 'MAC Address wajib diisi.',
             'mac_address.unique' => 'MAC Address sudah dipakai aset lain.',

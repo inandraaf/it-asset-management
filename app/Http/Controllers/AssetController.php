@@ -140,7 +140,9 @@ class AssetController extends Controller
                 return;
             }
 
-            $aggregate = $category === ComponentCategory::Ram->value;
+            // RAM selalu agregat; storage bisa dipilih mode agregat.
+            $aggregate = $category === ComponentCategory::Ram->value
+                || ($def['aggregate'] ?? false);
 
             $query->whereIn('assets.id', function ($sub) use ($category, $targetMb, $aggregate) {
                 $sub->from('component_installations as i')

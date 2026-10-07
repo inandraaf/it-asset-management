@@ -259,4 +259,125 @@ class AssetTypeTest extends TestCase
             ]))
             ->assertSessionHasErrors('hostname');
     }
+
+    // -------------------------------------------- U3b: merek per jenis
+
+    public function test_brand_is_required_for_laptop_cctv_printer(): void
+    {
+        $this->assertFalse(AssetType::PC->requiresBrand());
+        $this->assertTrue(AssetType::Laptop->requiresBrand());
+        $this->assertTrue(AssetType::Cctv->requiresBrand());
+        $this->assertTrue(AssetType::Printer->requiresBrand());
+    }
+
+    public function test_pc_without_brand_is_accepted(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('assets.store'), $this->payload([
+                'type' => AssetType::PC->value,
+                'brand' => null,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(Asset::sole()->brand);
+    }
+
+    public function test_laptop_without_brand_is_rejected(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('assets.store'), $this->payload([
+                'type' => AssetType::Laptop->value,
+                'brand' => null,
+            ]))
+            ->assertSessionHasErrors('brand');
+    }
+
+    public function test_cctv_without_brand_is_rejected(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('assets.store'), $this->payload([
+                'type' => AssetType::Cctv->value,
+                'brand' => null,
+                'mac_address' => null,
+                'specs' => [],
+            ]))
+            ->assertSessionHasErrors('brand');
+    }
+
+    public function test_printer_without_brand_is_rejected(): void
+    {
+        $department = Department::create(['nama_dept' => 'HRGA']);
+
+        $this->actingAs($this->admin())
+            ->post(route('assets.store'), $this->payload([
+                'type' => AssetType::Printer->value,
+                'brand' => null,
+                'mac_address' => null,
+                'department_id' => $department->id,
+                'specs' => [],
+            ]))
+            ->assertSessionHasErrors('brand');
+    }
+
+    // --------------------------------- U3a: tampilan CCTV/Printer
+
+    public function test_cctv_detail_hides_computer_only_sections(): void
+    {
+        $asset = Asset::factory()->cctv()->create(['hostname' => 'cctv-edp-01']);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('assets.show', $asset))
+            ->assertOk()
+            ->getContent();
+
+        // Bagian khusus komputer tidak boleh muncul.
+        $this->assertStringNotContainsString('Pemegang Saat Ini', $html);
+        $this->assertStringNotContainsString('Komponen Terpasang', $html);
+        $this->assertStringNotContainsString('Riwayat Pemakaian', $html);
+        $this->assertStringNotContainsString('Akses Remote & Kredensial', $html);
+        $this->assertStringNotContainsString('Sistem Operasi', $html);
+        // Informasi aset dasar tetap ada.
+        $this->assertStringContainsString('Informasi Aset', $html);
+        $this->assertStringContainsString('MAC Address', $html);
+    }
+
+    public function test_printer_detail_shows_owner_department(): void
+    {
+        $department = Department::create(['nama_dept' => 'HRGA']);
+        $asset = Asset::factory()->printer()->create(['department_id' => $department->id]);
+
+        $this->actingAs($this->admin())
+            ->get(route('assets.show', $asset))
+            ->assertOk()
+            ->assertSee('Departemen Pemilik')
+            ->assertSee('HRGA')
+            ->assertDontSee('Pemegang Saat Ini');
+    }
+
+    public function test_computer_detail_still_shows_all_sections(): void
+    {
+        $asset = Asset::factory()->pc()->create();
+
+        $this->actingAs($this->admin())
+            ->get(route('assets.show', $asset))
+            ->assertOk()
+            ->assertSee('Pemegang Saat Ini')
+            ->assertSee('Komponen Terpasang')
+            ->assertSee('Riwayat Pemakaian');
+    }
+
+    // --------------------------------- U3c: form aset per jenis
+
+    public function test_create_form_hides_os_for_department_devices(): void
+    {
+        Department::create(['nama_dept' => 'EDP']);
+
+        $html = $this->actingAs($this->admin())
+            ->get(route('assets.create'))
+            ->assertOk()
+            ->getContent();
+
+        // Kartu OS memakai x-show yang hanya tampil untuk PC/Laptop.
+        $this->assertStringContainsString("x-show=\"type === 'PC' || type === 'Laptop'\"", $html);
+    }
 }

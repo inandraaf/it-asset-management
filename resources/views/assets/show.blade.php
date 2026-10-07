@@ -17,7 +17,9 @@
     </x-slot>
 
     <div class="space-y-6">
-        {{-- Pemegang saat ini / aksi alokasi --}}
+        {{-- Pemegang saat ini / aksi alokasi — hanya untuk PC/Laptop.
+             CCTV & Printer tidak punya pemegang karyawan (U3a). --}}
+        @if ($asset->type->isComputer())
         <div x-data="{ showReturn: false }">
             <x-card :padded="false">
                 <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
@@ -124,6 +126,7 @@
                     </div>
                 </x-card>
             </div>
+        @endif
 
         {{-- Informasi aset --}}
         <x-card :title="__('Informasi Aset')">
@@ -132,12 +135,26 @@
                     $info = [
                         ['label' => __('Jenis'), 'value' => $asset->type->label()],
                         ['label' => __('Merek & Model'), 'value' => $asset->brandLabel()],
-                        ['label' => __('Nama Komputer'), 'value' => $asset->hostname ?? '—', 'mono' => true],
-                        ['label' => __('MAC Address'), 'value' => $asset->mac_address, 'mono' => true],
-                        ['label' => __('IP Address'), 'value' => $asset->ip_address ?? '—', 'mono' => true],
-                        ['label' => __('Sistem Operasi'), 'value' => $asset->osLabel()],
-                        ['label' => __('Dicatat oleh'), 'value' => $asset->creator?->name ?? '—'],
                     ];
+
+                    // Nama perangkat & OS hanya relevan untuk komputer (U3a).
+                    if ($asset->type->isComputer()) {
+                        $info[] = ['label' => __('Nama Komputer'), 'value' => $asset->hostname ?? '—', 'mono' => true];
+                    }
+
+                    $info[] = ['label' => __('MAC Address'), 'value' => $asset->mac_address ?? '—', 'mono' => true];
+                    $info[] = ['label' => __('IP Address'), 'value' => $asset->ip_address ?? '—', 'mono' => true];
+
+                    if ($asset->type->isComputer()) {
+                        $info[] = ['label' => __('Sistem Operasi'), 'value' => $asset->osLabel()];
+                    }
+
+                    // Departemen pemilik (Printer).
+                    if ($asset->department) {
+                        $info[] = ['label' => __('Departemen Pemilik'), 'value' => $asset->department->nama_dept];
+                    }
+
+                    $info[] = ['label' => __('Dicatat oleh'), 'value' => $asset->creator?->name ?? '—'];
                 @endphp
 
                 @foreach ($info as $item)
@@ -151,8 +168,10 @@
             </dl>
         </x-card>
 
-        {{-- Kredensial & akses remote (S5) — hanya Admin IT --}}
-        @if (auth()->user()->isAdmin())
+        {{-- Kredensial & akses remote (S5).
+             Terbuka untuk semua role agar staf EDP yang didelegasikan dapat
+             mengeksekusi saat Admin IT tidak tersedia (U2). --}}
+        @if ($asset->type->isComputer())
             <x-card :title="__('Akses Remote & Kredensial')"
                     :description="__('Satu aset dapat memiliki beberapa akun (mis. Admin, User Biasa, VNC).')"
                     :padded="false"
@@ -161,9 +180,11 @@
                     <x-secondary-button type="button" x-on:click="showSecrets = ! showSecrets">
                         <span x-text="showSecrets ? @js(__('Sembunyikan')) : @js(__('Tampilkan'))"></span>
                     </x-secondary-button>
-                    <x-primary-button type="button" x-on:click="showAdd = ! showAdd">
-                        {{ __('Tambah Kredensial') }}
-                    </x-primary-button>
+                    @if (auth()->user()->isAdmin())
+                        <x-primary-button type="button" x-on:click="showAdd = ! showAdd">
+                            {{ __('Tambah Kredensial') }}
+                        </x-primary-button>
+                    @endif
                 </x-slot>
 
                 @php($credentials = $asset->credentials)
@@ -180,7 +201,9 @@
                                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Nama Pengguna') }}</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Kata Sandi') }}</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Catatan') }}</th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Aksi') }}</th>
+                                        @if (auth()->user()->isAdmin())
+                                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Aksi') }}</th>
+                                        @endif
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
@@ -199,17 +222,19 @@
                                             <td class="px-4 py-3.5 text-sm text-slate-500">
                                                 {{ \Illuminate\Support\Str::limit($credential->notes, 50) ?: '—' }}
                                             </td>
-                                            <td class="whitespace-nowrap px-4 py-3.5 text-right">
-                                                <form method="POST" action="{{ route('credentials.destroy', $credential) }}"
-                                                      data-confirm="Hapus kredensial {{ $credential->label }}?"
-                                                      data-confirm-button="Hapus Kredensial">
-                                                    @csrf
-                                                    @method('delete')
-                                                    <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">
-                                                        {{ __('Hapus') }}
-                                                    </button>
-                                                </form>
-                                            </td>
+                                            @if (auth()->user()->isAdmin())
+                                                <td class="whitespace-nowrap px-4 py-3.5 text-right">
+                                                    <form method="POST" action="{{ route('credentials.destroy', $credential) }}"
+                                                          data-confirm="Hapus kredensial {{ $credential->label }}?"
+                                                          data-confirm-button="Hapus Kredensial">
+                                                        @csrf
+                                                        @method('delete')
+                                                        <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">
+                                                            {{ __('Hapus') }}
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            @endif
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -224,7 +249,8 @@
                         </p>
                     @endif
 
-                    {{-- Form tambah kredensial --}}
+                    {{-- Form tambah kredensial (hanya admin) --}}
+                    @if (auth()->user()->isAdmin())
                     <div x-show="showAdd" x-cloak x-transition class="mt-5 border-t border-slate-200 pt-5">
                         <form method="POST" action="{{ route('assets.credentials.store', $asset) }}"
                               class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -262,11 +288,13 @@
                             </div>
                         </form>
                     </div>
+                    @endif
                 </div>
             </x-card>
         @endif
 
-            {{-- Komponen terpasang --}}
+            {{-- Komponen terpasang — hanya untuk komputer (U3a) --}}
+            @if ($asset->type->isComputer())
             <x-card :title="__('Komponen Terpasang')" :padded="false">
                 @if (auth()->user()->isAdmin())
                     <x-slot name="actions">
@@ -395,8 +423,10 @@
                     </div>
                 @endif
             </x-card>
+            @endif
 
-            {{-- Riwayat --}}
+            {{-- Riwayat pemakaian — hanya untuk komputer (U3a) --}}
+            @if ($asset->type->isComputer())
             <x-card :title="__('Riwayat Pemakaian')" :padded="false">
                 @if ($history->isEmpty())
                     <x-empty-state
@@ -449,6 +479,7 @@
                     </div>
                 @endif
             </x-card>
+            @endif
 
             @if (auth()->user()->isAdmin())
                 <div class="flex flex-wrap items-center justify-end gap-3">

@@ -364,6 +364,15 @@ Rincian di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) 
 
 Rincian di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) §S1–S5.
 
+### Fase 3 Lanjutan — Temuan U1–U4 ✅
+
+| # | Permintaan | Status |
+| --- | --- | --- |
+| U1 | Filter storage: per keping **dan** total | ✅ |
+| U2 | Kredensial dapat dilihat viewer | ✅ |
+| U3 | CCTV/Printer: sembunyikan bagian komputer, merek wajib, OS hidden di form | ✅ |
+| U4 | Satu karyawan memegang banyak aset (sudah didukung) | ✅ |
+
 ## 7. Risiko & Mitigasi
 
 | Risiko | Dampak | Mitigasi |
