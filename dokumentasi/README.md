@@ -119,6 +119,10 @@ dengan riwayat pemasangan. Lihat [14-manajemen-komponen.md](14-manajemen-kompone
 - [x] W3 Urutan daftar stabil (kode aset) + aset baru disorot sekali
 - [x] W4 Urutan daftar menurut jenis (PC → Laptop → CCTV → Printer), lalu kode aset
 - [x] W4b Seeder idempoten walau MAC kosong (kunci pindah ke `hostname`)
+- [x] X1 Kolom Spesifikasi: pemisah ` | ` + tampilkan merek komponen
+- [x] X2 Lokasi fisik CCTV (kolom `location`, hanya CCTV)
+- [x] X3 Rakit komponen saat membuat aset (baru dan/atau dari gudang)
+- [x] X4 Tooltip instan di tabel aset + kolom Spesifikasi 2 baris
 
 Rincian, analisis, dan prioritasnya di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md).
 

@@ -134,6 +134,7 @@ Schema::create('employees', function (Blueprint $table) {
 | `hostname` | varchar(63) | UNIQUE (parsial), nullable | Nama komputer di jaringan/Windows, disimpan lowercase |
 | `mac_address` | varchar(17) | NOT NULL, UNIQUE | Format `AA:BB:CC:DD:EE:FF` |
 | `ip_address` | varchar(45) | UNIQUE, nullable | IPv4/IPv6, unik jika diisi |
+| `location` | varchar(150) | nullable | **Lokasi fisik, hanya untuk CCTV** (mis. "Lobby"). Jenis lain dinolkan — lihat [15](15-feedback-dan-tindak-lanjut.md) X2 |
 | `specs` | jsonb | NOT NULL, default `{}` | Komponen komputer — lihat tabel di bawah |
 | `status` | varchar(20) | NOT NULL, default `Available` | CHECK 4 nilai status |
 | `created_by` | bigint | FK → `users.id`, `nullOnDelete` | Audit pembuat (opsional) |
@@ -177,6 +178,8 @@ Schema::create('assets', function (Blueprint $table) {
     $table->string('hostname', 63)->nullable();
     $table->string('mac_address', 17);
     $table->string('ip_address', 45)->nullable();
+    // Migrasi 2026_01_01_000017: lokasi fisik CCTV (X2).
+    $table->string('location', 150)->nullable();
     $table->jsonb('specs')->default('{}');
     $table->string('status', 20)->default('Available');
     $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();

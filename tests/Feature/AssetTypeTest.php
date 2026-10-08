@@ -456,4 +456,63 @@ class AssetTypeTest extends TestCase
             ->getContent();
         $this->assertStringContainsString('x-bind:required="true"', $pcHtml);
     }
+
+    // ---------------------------------------- X2: lokasi khusus CCTV
+
+    public function test_only_cctv_supports_location(): void
+    {
+        $this->assertTrue(AssetType::Cctv->supportsLocation());
+        $this->assertFalse(AssetType::PC->supportsLocation());
+        $this->assertFalse(AssetType::Laptop->supportsLocation());
+        $this->assertFalse(AssetType::Printer->supportsLocation());
+    }
+
+    public function test_cctv_can_be_created_with_location(): void
+    {
+        $this->actingAs($this->admin())->post(route('assets.store'), [
+            'type' => AssetType::Cctv->value,
+            'brand' => 'Hikvision',
+            'location' => 'Lobby Utama',
+            'specs' => [],
+        ])->assertRedirect();
+
+        $this->assertSame('Lobby Utama', Asset::where('type', 'CCTV')->sole()->location);
+    }
+
+    public function test_location_is_ignored_for_non_cctv(): void
+    {
+        $this->actingAs($this->admin())->post(route('assets.store'), [
+            'type' => AssetType::PC->value,
+            'brand' => 'Dell',
+            'mac_address' => 'AA:BB:CC:DD:EE:21',
+            'location' => 'Lobby Utama',
+            'specs' => [],
+        ])->assertRedirect();
+
+        $this->assertNull(Asset::where('type', 'PC')->sole()->location);
+    }
+
+    public function test_cctv_detail_shows_location(): void
+    {
+        $cctv = Asset::factory()->cctv()->create([
+            'hostname' => 'cctv-edp-01',
+            'location' => 'Lobby Utama',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('assets.show', $cctv))
+            ->assertOk()
+            ->assertSee('Lokasi')
+            ->assertSee('Lobby Utama');
+    }
+
+    public function test_computer_detail_has_no_location(): void
+    {
+        $pc = Asset::factory()->pc()->create(['location' => 'Lobby Utama']);
+
+        $this->actingAs($this->admin())
+            ->get(route('assets.show', $pc))
+            ->assertOk()
+            ->assertDontSee('Lokasi');
+    }
 }

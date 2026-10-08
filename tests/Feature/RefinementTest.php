@@ -24,9 +24,10 @@ class RefinementTest extends TestCase
         return User::factory()->admin()->create();
     }
 
-    private function install(Asset $asset, ComponentCategory $category, array $specs): Component
+    private function install(Asset $asset, ComponentCategory $category, array $specs, string $brand = 'Contoh'): Component
     {
         $component = Component::factory()->ofCategory($category)->create([
+            'brand' => $brand,
             'specs' => $specs,
             'status' => ComponentStatus::Installed,
         ]);
@@ -61,16 +62,20 @@ class RefinementTest extends TestCase
         $asset = Asset::factory()->create();
 
         // Sengaja dibuat urutan terbalik + kategori non-prioritas.
-        $this->install($asset, ComponentCategory::Monitor, ['size' => '24"']);
-        $this->install($asset, ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD']);
-        $this->install($asset, ComponentCategory::Ram, ['capacity' => '16GB', 'type' => 'DDR4']);
-        $this->install($asset, ComponentCategory::Motherboard, ['chipset' => 'H510']);
-        $this->install($asset, ComponentCategory::Cpu, ['series' => 'i7-11700']);
+        $this->install($asset, ComponentCategory::Monitor, ['size' => '24"'], 'LG');
+        $this->install($asset, ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD'], 'Samsung');
+        $this->install($asset, ComponentCategory::Ram, ['capacity' => '16GB', 'type' => 'DDR4'], 'Kingston');
+        $this->install($asset, ComponentCategory::Motherboard, ['chipset' => 'H510'], 'ASUS');
+        $this->install($asset, ComponentCategory::Cpu, ['series' => 'i7-11700'], 'Intel');
 
         $asset->load('activeComponentInstallations.component');
 
         // Urutan tetap: motherboard, CPU, RAM, storage. Monitor mengisi slot sisa.
-        $this->assertSame('H510 · i7-11700 · 16GB DDR4 · 512GB SSD · 24"', $asset->hardwareSummary(5));
+        // X1: merek ikut tampil, pemisah ` | `.
+        $this->assertSame(
+            'ASUS H510 | Intel i7-11700 | Kingston 16GB DDR4 | Samsung 512GB SSD | LG 24"',
+            $asset->hardwareSummary(5)
+        );
     }
 
     public function test_summary_fills_with_other_components_when_priority_missing(): void
@@ -78,23 +83,23 @@ class RefinementTest extends TestCase
         $asset = Asset::factory()->create();
 
         // Tidak ada motherboard/CPU/RAM/storage/GPU.
-        $this->install($asset, ComponentCategory::Monitor, ['size' => '27"']);
-        $this->install($asset, ComponentCategory::Psu, ['wattage' => '500W']);
+        $this->install($asset, ComponentCategory::Monitor, ['size' => '27"'], 'LG');
+        $this->install($asset, ComponentCategory::Psu, ['wattage' => '500W'], 'Corsair');
 
         $asset->load('activeComponentInstallations.component');
 
-        $this->assertSame('27" · 500W', $asset->hardwareSummary());
+        $this->assertSame('LG 27" | Corsair 500W', $asset->hardwareSummary());
     }
 
     public function test_summary_merges_identical_values(): void
     {
         $asset = Asset::factory()->create();
-        $this->install($asset, ComponentCategory::Ram, ['capacity' => '8GB', 'type' => 'DDR4']);
-        $this->install($asset, ComponentCategory::Ram, ['capacity' => '8GB', 'type' => 'DDR4']);
+        $this->install($asset, ComponentCategory::Ram, ['capacity' => '8GB', 'type' => 'DDR4'], 'Kingston');
+        $this->install($asset, ComponentCategory::Ram, ['capacity' => '8GB', 'type' => 'DDR4'], 'Kingston');
 
         $asset->load('activeComponentInstallations.component');
 
-        $this->assertSame('8GB DDR4 x2', $asset->hardwareSummary());
+        $this->assertSame('Kingston 8GB DDR4 x2', $asset->hardwareSummary());
     }
 
     // -------------------------------------------------------------- T3 OS

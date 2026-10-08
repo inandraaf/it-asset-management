@@ -265,17 +265,16 @@ class AssetTest extends TestCase
 
         $asset->load('activeComponentInstallations.component');
 
-        // FB-3: yang tampil kapasitas & tipe, bukan merek.
-        $this->assertSame('8GB DDR4', $asset->hardwareSummary());
-        $this->assertStringNotContainsString('Kingston', $asset->hardwareSummary());
+        // X1: merek ikut tampil, dipisah spasi dari atribut teknis.
+        $this->assertSame('Kingston 8GB DDR4', $asset->hardwareSummary());
     }
 
     public function test_hardware_summary_orders_cpu_then_ram_then_storage(): void
     {
         $asset = Asset::factory()->create();
 
-        $make = function (\App\Enums\ComponentCategory $category, array $specs) use ($asset) {
-            $component = \App\Models\Component::factory()->ofCategory($category)->create(['specs' => $specs]);
+        $make = function (\App\Enums\ComponentCategory $category, array $specs, array $extra = []) use ($asset) {
+            $component = \App\Models\Component::factory()->ofCategory($category)->create($extra + ['specs' => $specs]);
 
             \App\Models\ComponentInstallation::factory()->create([
                 'component_id' => $component->id,
@@ -285,13 +284,17 @@ class AssetTest extends TestCase
         };
 
         // Sengaja dibuat urutan terbalik untuk membuktikan pengurutan.
-        $make(\App\Enums\ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD']);
-        $make(\App\Enums\ComponentCategory::Ram, ['capacity' => '16GB', 'type' => 'DDR4']);
-        $make(\App\Enums\ComponentCategory::Cpu, ['series' => 'i7-11700']);
+        $make(\App\Enums\ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD'], ['brand' => 'Samsung']);
+        $make(\App\Enums\ComponentCategory::Ram, ['capacity' => '16GB', 'type' => 'DDR4'], ['brand' => 'Kingston']);
+        $make(\App\Enums\ComponentCategory::Cpu, ['series' => 'i7-11700'], ['brand' => 'Intel']);
 
         $asset->load('activeComponentInstallations.component');
 
-        $this->assertSame('i7-11700 · 16GB DDR4 · 512GB SSD', $asset->hardwareSummary());
+        // X1: pemisah antar komponen ` | `, merek ikut tampil.
+        $this->assertSame(
+            'Intel i7-11700 | Kingston 16GB DDR4 | Samsung 512GB SSD',
+            $asset->hardwareSummary()
+        );
     }
 
     public function test_hardware_summary_is_empty_without_components(): void

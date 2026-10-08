@@ -458,9 +458,39 @@ class ComponentTest extends TestCase
     }
 
     /**
-     * Ringkasan menggabungkan komponen ber-spesifikasi SAMA walau mereknya beda.
+     * Ringkasan menggabungkan komponen ber-spesifikasi SAMA **dan merek sama**.
+     *
+     * X1: merek kini ikut tampil, sehingga dua keping dengan merek berbeda
+     * tidak lagi digabung menjadi satu entri.
      */
-    public function test_summary_merges_same_specs_across_brands(): void
+    public function test_summary_merges_same_specs_and_brand(): void
+    {
+        $asset = Asset::factory()->create();
+
+        foreach (['Kingston', 'Kingston'] as $brand) {
+            $ram = Component::factory()->ofCategory(ComponentCategory::Ram)->create([
+                'brand' => $brand,
+                'specs' => ['capacity' => '16GB', 'type' => 'DDR4'],
+            ]);
+
+            \App\Models\ComponentInstallation::factory()->create([
+                'component_id' => $ram->id,
+                'asset_id' => $asset->id,
+                'removed_date' => null,
+            ]);
+        }
+
+        $asset->load('activeComponentInstallations.component');
+
+        // Merek sama → digabung, dengan merek di depan.
+        $this->assertSame('Kingston 16GB DDR4 x2', $asset->hardwareSummary());
+        $this->assertStringContainsString('RAM: Kingston 16GB DDR4 x2', $asset->hardwareSummaryDetailed());
+    }
+
+    /**
+     * Merek berbeda → tidak digabung, karena merek kini bagian dari ringkasan (X1).
+     */
+    public function test_summary_keeps_different_brands_separate(): void
     {
         $asset = Asset::factory()->create();
 
@@ -479,9 +509,6 @@ class ComponentTest extends TestCase
 
         $asset->load('activeComponentInstallations.component');
 
-        // Bukan "16GB DDR4 + Samsung" — nilainya digabung.
-        $this->assertSame('16GB DDR4 x2', $asset->hardwareSummary());
-        $this->assertStringNotContainsString('Samsung', $asset->hardwareSummary());
-        $this->assertStringContainsString('RAM: 16GB DDR4 x2', $asset->hardwareSummaryDetailed());
+        $this->assertSame('Kingston 16GB DDR4 + Samsung 16GB DDR4', $asset->hardwareSummary());
     }
 }

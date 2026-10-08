@@ -711,6 +711,114 @@ $asset = Asset::where('hostname', strtolower($hostname))->first();
 `test_seeder_is_idempotent_with_null_mac_addresses`, `test_seeder_gives_printers_a_department`,
 `test_cctv_may_have_null_mac`.
 
+### X1–X4 — Umpan Balik Lanjutan (Ketiga)
+
+| # | Permintaan | Perbaikan | Status |
+| --- | --- | --- | --- |
+| **X1** | Kolom Spesifikasi daftar aset: pisah dengan `|`, tampilkan merek | Pemisah ` | ` antar komponen + `Component::brandedSummary()` menampilkan merek | ✅ |
+| **X2** | Form CCTV: tambah input **lokasi** | Kolom `location` (khusus CCTV) + input di form Create/Edit + tampil di detail & daftar | ✅ |
+| **X3** | Tambah aset komputer sekaligus rakit komponennya | Bagian **Susun Komponen** di form Tambah Aset: komponen baru **dan/atau** dari gudang, satu submit | ✅ |
+| **X4** | Kolom Spesifikasi terpotong; tooltip lambat muncul | Tooltip Alpine **instan** (teleport ke `body`) + kolom 2 baris | ✅ |
+
+#### X1 — Pemisah ` | ` dan Merek di Ringkasan Spesifikasi
+
+Sebelumnya ringkasan memakai pemisah ` · ` dan **sengaja membuang merek** (keputusan FB-3).
+Umpan balik membalik sebagian keputusan itu: merek dibutuhkan, dan pemisahnya diganti ` | `.
+
+| | Sebelum | Sesudah |
+| --- | --- | --- |
+| Satu komponen | `8GB DDR4` | `Kingston 8GB DDR4` |
+| Beberapa komponen | `i7-11700 · 16GB DDR4 · 512GB SSD` | `Intel i7-11700 \| Kingston 16GB DDR4 \| Samsung 512GB SSD` |
+| Dua keping identik | `8GB DDR4 x2` | `Kingston 8GB DDR4 x2` |
+| Merek berbeda | digabung `16GB DDR4 x2` | dipisah `Kingston 16GB DDR4 + Samsung 16GB DDR4` |
+
+Merek tidak digandakan bila `essentialSummary()` sudah memuatnya (mis. saat jatuh ke
+`fullName()`), lihat `Component::brandedSummary()`.
+
+> **Konsekuensi:** dua komponen dengan spesifikasi sama tetapi **merek berbeda** tidak lagi
+> digabung menjadi satu entri. Ini disengaja — merek kini bagian dari informasi yang tampil.
+
+Tooltip (`hardwareSummaryDetailed()`) ikut memakai merek dan pemisah ` | `, dengan label
+kategori: `RAM: Kingston 16GB DDR4 x2 | CPU: Intel i7-11700`.
+
+#### X2 — Lokasi CCTV
+
+CCTV tidak melekat departemen (T1) dan sering dipasang di titik yang tidak terikat meja
+karyawan, sehingga lokasi dicatat eksplisit.
+
+| Aspek | Isi |
+| --- | --- |
+| Kolom | `assets.location` (varchar 150, **nullable**) |
+| Diterapkan | Hanya jenis **CCTV** — `AssetType::supportsLocation()` |
+| Input | Form Create (tampil saat jenis CCTV) & Form Edit |
+| Validasi | `nullable, string, max:150`; untuk jenis lain **dinolkan** di `prepareForValidation()` |
+| Tampil | Kartu Informasi Aset (detail) & kolom Pemegang pada daftar |
+
+> Printer **tidak** memakai lokasi (melekat departemen, lokasinya sudah terwakili).
+
+#### X3 — Rakit Komponen Saat Membuat Aset
+
+Umpan balik: menambah aset komputer belum bisa sekaligus menambah komponennya. Form
+Tambah Aset kini punya bagian **Susun Komponen** (hanya PC/Laptop) dengan dua sumber:
+
+| Sumber | Isi | Perilaku |
+| --- | --- | --- |
+| **Komponen Baru** | Baris dinamis: kategori, merek, model, nomor seri, spesifikasi | Komponen dibuat (kode otomatis), lalu dipasang |
+| **Dari Gudang** | Pilih komponen berstatus `In Stock` & belum terpasang | Dipasang apa adanya (tidak digandakan) |
+
+Keduanya boleh dikombinasikan dalam satu submit. Seluruh proses berjalan **dalam satu
+transaksi** bersama pembuatan aset — bila satu gagal, tidak ada aset/komponen setengah jadi.
+
+Detail teknis:
+
+- Validasi komponen baru ada di `ValidatesComponentAssembly` (dipakai `StoreAssetRequest`),
+  dengan aturan `specs` **per kategori** diturunkan dari `ComponentCategory::allSpecKeys()`.
+- Pemasangan memakai `ComponentAllocationService::installMany()` (transaksi + row lock yang
+  sudah ada), sehingga invariant "satu komponen satu host" tetap terjaga.
+- Komponen gudang divalidasi harus `isInstallable()` agar pesan errornya terlihat di form.
+- Fieldset rakit di-**disable** saat jenis bukan komputer, agar input tersembunyi tidak ikut
+  ter-submit (pola sama seperti W1).
+- Halaman **Tambah Komponen** tetap ada untuk pencatatan stok tanpa langsung dipasang.
+
+**Regression Test:** `AssetAssemblyTest` (10 test) — komponen baru, gudang, campuran, kode per
+kategori, validasi merek, komponen sibuk ditolak, tidak ada data parsial, perangkat departemen
+diabaikan, dan UI tersedia.
+
+#### X4 — Tooltip Instan & Kolom Spesifikasi
+
+**Gejala:** kolom Spesifikasi terpotong karena teksnya panjang (kini memuat merek, X1), sedangkan
+tooltip `title` bawaan browser baru muncul setelah ~1 detik dan tidak bisa ditata.
+
+**Perbaikan:** tooltip Alpine `itamTooltip()` yang muncul **seketika** saat hover/fokus.
+
+| Aspek | Sebelum | Sesudah |
+| --- | --- | --- |
+| Pemicu | `title` bawaan browser (~1 detik) | `mouseenter`/`focusin` Alpine — **instan** |
+| Tampilan | Tidak bisa ditata | Kartu gelap, teks putih, transisi 75 ms |
+| Kolom | `max-w-xs` + `truncate` (1 baris) | `max-w-md` + `line-clamp-2` (2 baris) |
+| Aksesibilitas | hanya hover | `tabindex` + `focusin/focusout` + `aria-label` |
+
+**Masalah utama & solusinya:** tooltip `position: absolute` akan **terpotong** oleh kontainer
+`overflow-x-auto` pada tabel. Karena itu tooltip di-**teleport ke `body`** dengan
+`position: fixed`, lalu posisinya dihitung dari `getBoundingClientRect()` sel. Bila ruang di
+bawah tidak cukup, tooltip otomatis muncul di **atas** sel. Posisi kiri dibatasi agar tidak
+keluar layar.
+
+Logika penempatan terpusat di `window.itamTooltip()` (`resources/js/app.js`), dipakai komponen
+Blade `<x-spec-tooltip>`.
+
+**Verifikasi (Chrome DevTools Protocol, headless):**
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| Tooltip muncul setelah hover | **72 ms** (praktis instan) |
+| `position` | `fixed` |
+| Induk di DOM | `body` (tidak terpotong kontainer scroll) |
+| Dalam viewport | `top:62 · bottom:97.5` dari `vh:813` — aman |
+
+**Regression Test:** `UiRegressionTest::test_asset_index_tooltip_contains_category_labels`,
+`test_asset_index_uses_instant_tooltip`.
+
 ### T6 — Struktur Sidebar
 
 ```

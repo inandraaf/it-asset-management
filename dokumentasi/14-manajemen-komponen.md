@@ -452,6 +452,8 @@ Semua langkah **selesai** (Fase 2):
 | **FB-3 Ringkasan** | `Component::essentialSummary()` menampilkan atribut teknis (mis. `8GB DDR4`), bukan merek. Ringkasan aset mengurutkan CPU → RAM → Storage → Motherboard → GPU dan menggabungkan nilai identik (`8GB DDR4 x2`). |
 | **FB-6 Operasi massal** | `ComponentAllocationService` menambah `installMany()`, `removeMany()`, `moveMany()` — semua dalam satu transaksi (gagal satu = batal semua). UI: `BulkComponentController` + 3 halaman bulk. |
 | **FB-4 Jenis aset** | Komponen **hanya** untuk PC/Laptop (`AssetType::supportsComponents()`). CCTV/Printer tidak menerima komponen. |
+| **X1 Ringkasan + merek** | `Component::brandedSummary()` menampilkan merek (mis. `Kingston 8GB DDR4`); pemisah antar komponen di daftar aset menjadi ` | `. Dua komponen berspesifikasi sama tetapi **merek berbeda** tidak lagi digabung. |
+| **X3 Rakit saat buat aset** | Form **Tambah Aset** punya bagian "Susun Komponen": komponen baru (dibuat otomatis) dan/atau pilihan dari gudang, dipasang dalam transaksi yang sama dengan pembuatan aset. Validasi ada di trait `ValidatesComponentAssembly`; pemasangan tetap lewat `installMany()`. |
 
 ## 17c. Input Berbasis Pilihan (S4) ✅
 

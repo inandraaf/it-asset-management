@@ -426,4 +426,25 @@ class Component extends Model
             ComponentCategory::Other => $this->fullName(),
         };
     }
+
+    /**
+     * Ringkasan esensial **beserta merek** untuk kolom daftar aset.
+     *
+     * Mis. `Kingston 8GB DDR4`, `Intel i7-11700`, `Samsung 512GB SSD`.
+     * Merek tidak digandakan bila `essentialSummary()` sudah memuatnya
+     * (mis. saat jatuh ke `fullName()`).
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md X1
+     */
+    public function brandedSummary(): string
+    {
+        $essential = $this->essentialSummary();
+        $brand = trim((string) $this->brand);
+
+        if ($brand === '' || str_starts_with($essential, $brand)) {
+            return $essential;
+        }
+
+        return trim($brand.' '.$essential);
+    }
 }

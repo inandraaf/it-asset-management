@@ -42,6 +42,8 @@ class UpdateAssetRequest extends FormRequest
                 'nullable', 'ip', 'max:45',
                 Rule::unique('assets', 'ip_address')->ignore($assetId)->whereNull('deleted_at'),
             ],
+            // Lokasi fisik hanya untuk CCTV (X2); dinolkan untuk jenis lain.
+            'location' => ['nullable', 'string', 'max:150'],
             // 'specs' nullable: Fase 2 hanya menyimpan OS yang bersifat opsional.
             'specs' => ['nullable', 'array'],
             ...$this->specRules(),
@@ -83,6 +85,10 @@ class UpdateAssetRequest extends FormRequest
                 ? strtoupper(trim((string) $this->input('mac_address')))
                 : $this->input('mac_address'),
             'ip_address' => $normalize($this->input('ip_address')),
+            // Lokasi hanya bermakna untuk CCTV (X2).
+            'location' => $this->route('asset')->type->supportsLocation()
+                ? $normalize($this->input('location'))
+                : null,
             'specs' => $this->normalizedSpecs(),
         ]);
     }

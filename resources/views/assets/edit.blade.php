@@ -49,6 +49,18 @@
                                       :value="old('brand', $asset->brand)" maxlength="100" placeholder="Kosongkan bila rakitan" />
                         <x-input-error class="mt-2" :messages="$errors->get('brand')" />
                     </div>
+
+                    {{-- Lokasi fisik: hanya CCTV (X2) --}}
+                    @if ($asset->type->supportsLocation())
+                        <div>
+                            <x-input-label for="location" :value="__('Lokasi')" />
+                            <x-text-input id="location" name="location" type="text" class="mt-1"
+                                          :value="old('location', $asset->location)" maxlength="150"
+                                          placeholder="{{ __('Lobby, Parkiran, Gudang...') }}" />
+                            <p class="mt-1 text-xs text-slate-500">{{ __('Titik pemasangan CCTV ini.') }}</p>
+                            <x-input-error class="mt-2" :messages="$errors->get('location')" />
+                        </div>
+                    @endif
                 </div>
             </x-card>
 

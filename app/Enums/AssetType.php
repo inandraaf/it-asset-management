@@ -150,6 +150,19 @@ enum AssetType: string
     }
 
     /**
+     * Apakah jenis ini menyimpan **lokasi fisik**.
+     *
+     * Hanya CCTV: tidak melekat departemen (T1), dipasang di titik tertentu
+     * (lobby, parkiran, dsb.) yang perlu dicatat.
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md X2
+     */
+    public function supportsLocation(): bool
+    {
+        return $this === self::Cctv;
+    }
+
+    /**
      * @return array<string, string>
      */
     public static function options(): array

@@ -194,6 +194,15 @@ class AssetSeeder extends Seeder
     ];
 
     /**
+     * Lokasi fisik CCTV (X2): hostname => lokasi.
+     */
+    private const LOCATIONS = [
+        'cctv-edp-01' => 'Lobby Utama',
+        'cctv-edp-02' => 'Gudang EDP',
+        'cctv-cc-01' => 'Parkiran',
+    ];
+
+    /**
      * Riwayat transfer contoh: [hostname, nip pemegang lama, tanggal assign lama,
      * tanggal return, nip pemegang baru, tanggal assign baru].
      */
@@ -239,6 +248,11 @@ class AssetSeeder extends Seeder
                 $asset->update([
                     'department_id' => Department::where('nama_dept', $deptName)->value('id'),
                 ]);
+            }
+
+            // Lokasi fisik CCTV (X2).
+            if ($location = self::LOCATIONS[strtolower($hostname)] ?? null) {
+                $asset->update(['location' => $location]);
             }
 
             $byHostname[$hostname] = [$asset, $holderNip];

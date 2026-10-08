@@ -303,6 +303,57 @@ enum ComponentCategory: string
     }
 
     /**
+     * Peta field spesifikasi per kategori untuk form (esensial + lanjutan),
+     * beserta label, placeholder, dan opsi dropdown.
+     *
+     * Dipakai form komponen mandiri **dan** form rakit saat menambah aset (X3),
+     * sehingga definisinya hanya ada di satu tempat.
+     *
+     * @return array<string, array{
+     *     label: string,
+     *     keys: array<string, array{label: string, placeholder: string, options: array<int, string>}>,
+     *     advanced: array<string, array{label: string, placeholder: string, options: array<int, string>}>
+     * }>
+     */
+    public static function specMap(): array
+    {
+        $map = [];
+
+        foreach (self::cases() as $category) {
+            $essential = [];
+            $advanced = [];
+
+            foreach ($category->specKeys() as $key) {
+                $essential[$key] = self::fieldMeta($category, $key);
+            }
+
+            foreach ($category->advancedSpecKeys() as $key) {
+                $advanced[$key] = self::fieldMeta($category, $key);
+            }
+
+            $map[$category->value] = [
+                'label' => $category->label(),
+                'keys' => $essential,
+                'advanced' => $advanced,
+            ];
+        }
+
+        return $map;
+    }
+
+    /**
+     * @return array{label: string, placeholder: string, options: array<int, string>}
+     */
+    private static function fieldMeta(self $category, string $key): array
+    {
+        return [
+            'label' => self::specLabel($key),
+            'placeholder' => $category->specPlaceholders()[$key] ?? '',
+            'options' => self::optionsFor($key, $category),
+        ];
+    }
+
+    /**
      * Opsi dikelompokkan Internal / Peripheral, untuk dropdown ber-optgroup.
      *
      * @return array<string, array<string, string>>

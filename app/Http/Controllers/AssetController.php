@@ -4,15 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetStatus;
 use App\Enums\AssetType;
+use App\Enums\ComponentCategory;
+use App\Enums\ComponentStatus;
 use App\Http\Requests\Asset\StoreAssetRequest;
 use App\Http\Requests\Asset\UpdateAssetRequest;
 use App\Models\Asset;
 use App\Models\Component;
 use App\Models\Department;
 use App\Services\CodeGenerator;
+use App\Services\ComponentAllocationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,7 +26,10 @@ use Illuminate\Support\Facades\DB;
  */
 class AssetController extends Controller
 {
-    public function __construct(private readonly CodeGenerator $codeGenerator) {}
+    public function __construct(
+        private readonly CodeGenerator $codeGenerator,
+        private readonly ComponentAllocationService $allocation,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -198,6 +205,15 @@ class AssetController extends Controller
             'specKeys' => Asset::SPEC_KEYS,
             'specLabels' => Asset::specLabels(),
             'requiredSpecKeys' => Asset::REQUIRED_SPEC_KEYS,
+            // Rakit komponen saat aset dibuat (X3).
+            'componentSpecMap' => ComponentCategory::specMap(),
+            'componentCategories' => ComponentCategory::options(),
+            'stockComponents' => Component::query()
+                ->where('status', ComponentStatus::InStock)
+                ->whereDoesntHave('activeInstallation')
+                ->orderBy('category')
+                ->orderBy('component_code')
+                ->get(),
         ]);
     }
 
@@ -206,12 +222,32 @@ class AssetController extends Controller
         $asset = DB::transaction(function () use ($request) {
             $data = $request->validated();
 
+            // Kolom rakitan bukan kolom `assets`; diproses terpisah di bawah.
+            unset($data['components']);
+
             // Kode aset SELALU dibuat sistem; form tidak menerima input kode.
             $data['asset_code'] = $this->codeGenerator->next(AssetType::from($data['type']));
             $data['status'] = AssetStatus::Available;
             $data['created_by'] = $request->user()->id;
 
-            return Asset::create($data);
+            $asset = Asset::create($data);
+
+            // Rakit komponen (X3) — hanya untuk komputer.
+            if ($asset->type->supportsComponents()) {
+                $componentIds = $this->createNewComponents($request->newComponents(), $request->user()->id);
+                $componentIds = [...$componentIds, ...$request->stockComponentIds()];
+
+                if ($componentIds !== []) {
+                    $this->allocation->installMany(
+                        $asset,
+                        $componentIds,
+                        Carbon::now(),
+                        'Dipasang saat aset dibuat.',
+                    );
+                }
+            }
+
+            return $asset;
         });
 
         // Tandai aset ini agar tampil teratas pada kunjungan pertama ke daftar.
@@ -220,6 +256,37 @@ class AssetController extends Controller
         return redirect()
             ->route('assets.show', $asset)
             ->with('success', 'Aset '.$asset->asset_code.' berhasil ditambahkan.');
+    }
+
+    /**
+     * Simpan komponen pengadaan baru (X3) lalu kembalikan id-nya.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return int[]
+     */
+    private function createNewComponents(array $rows, int $userId): array
+    {
+        $ids = [];
+
+        foreach ($rows as $row) {
+            /** @var ComponentCategory $category */
+            $category = $row['category'];
+
+            $component = Component::create([
+                'component_code' => $this->codeGenerator->nextComponent($category),
+                'category' => $category->value,
+                'brand' => $row['brand'],
+                'model' => $row['model'],
+                'serial_number' => $row['serial_number'],
+                'specs' => $row['specs'],
+                'status' => ComponentStatus::InStock,
+                'created_by' => $userId,
+            ]);
+
+            $ids[] = $component->id;
+        }
+
+        return $ids;
     }
 
     public function show(Asset $asset): View

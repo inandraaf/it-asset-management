@@ -100,9 +100,28 @@ Alpine.js dipakai untuk:
 - Auto-format MAC menjadi huruf kapital dan menyisipkan `:` tiap 2 karakter.
 - Menampilkan contoh kode aset sesuai jenis.
 
+> **Catatan Fase 3 (lihat [15](15-feedback-dan-tindak-lanjut.md)):** form kini juga memuat
+> pilihan jenis **PC/Laptop/CCTV/Printer**, field **Departemen** (Printer), **Lokasi** (CCTV,
+> X2), dan bagian **Susun Komponen** (X3) untuk PC/Laptop — komponen baru dan/atau dari gudang
+> yang langsung dipasang saat aset disimpan.
+
+### 4.1 Susun Komponen Saat Membuat Aset (X3)
+
+Hanya tampil untuk PC/Laptop. Dua sumber, boleh dikombinasikan:
+
+| Sumber | Input | Hasil |
+| --- | --- | --- |
+| Komponen Baru | kategori, merek, model, nomor seri, spesifikasi | Komponen dibuat (kode otomatis) lalu dipasang |
+| Dari Gudang | centang komponen `In Stock` | Dipasang apa adanya |
+
+Semua diproses dalam **satu transaksi** bersama pembuatan aset: gagal satu → tidak ada data
+setengah jadi. Validasi di trait `ValidatesComponentAssembly`; pemasangan lewat
+`ComponentAllocationService::installMany()`.
+
 ## 5. Form Edit Aset
 
-Boleh diubah: `brand`, `ip_address`, `specs`, `status`, `mac_address` (jarang, dengan validasi unik).
+Boleh diubah: `brand`, `ip_address`, `location` (CCTV), `specs`, `status`, `mac_address`
+(jarang, dengan validasi unik).
 
 Aturan tambahan:
 
@@ -116,13 +135,16 @@ Aturan tambahan:
 | Kolom | Isi |
 | --- | --- |
 | Kode Aset | link ke detail |
-| Jenis | badge (PC / Laptop) |
-| Merek | |
+| Jenis | badge (PC / Laptop / CCTV / Printer) |
+| Spesifikasi | ringkasan komponen terpasang, pemisah ` | `, **dengan merek** (X1); maks 2 baris + **tooltip instan** berlabel (X4) |
 | MAC Address | monospace |
 | IP Address | atau `-` |
-| Pengguna Saat Ini | nama karyawan + departemen, atau `-` |
+| Pengguna Saat Ini | nama karyawan + departemen; untuk CCTV tanpa pemilik → **lokasi** (X2); atau `-` |
 | Status | badge berwarna |
 | Aksi | Detail / Edit / Hapus |
+
+> **X1:** contoh isi kolom Spesifikasi: `Intel i7-11700 | Kingston 16GB DDR4 | Samsung 512GB SSD`.
+> Bila tidak ada komponen terpasang → `—`.
 
 ### Warna Badge Status
 

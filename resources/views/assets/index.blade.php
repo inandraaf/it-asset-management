@@ -218,9 +218,9 @@
                                         </span>
                                     </td>
                                     <td class="px-5 py-3.5 text-xs text-slate-600">
-                                        <div class="max-w-xs truncate" title="{{ $asset->hardwareSummaryDetailed() }}">
-                                            {{ $asset->hardwareSummary() }}
-                                        </div>
+                                        {{-- Tooltip instan (bukan `title` bawaan) + maks 2 baris (X1). --}}
+                                        <x-spec-tooltip :summary="$asset->hardwareSummary()"
+                                                        :detail="$asset->hardwareSummaryDetailed()" />
                                         @if ($asset->osLabel() !== '—')
                                             <div class="truncate text-slate-400">{{ $asset->osLabel() }}</div>
                                         @endif
@@ -239,6 +239,10 @@
                                             {{-- Aset departemen (CCTV/Printer) tanpa PIC --}}
                                             <div class="text-sm text-slate-700">{{ $asset->department->nama_dept }}</div>
                                             <div class="text-xs text-slate-400">{{ __('Perangkat departemen') }}</div>
+                                        @elseif ($asset->location)
+                                            {{-- CCTV tanpa pemilik: yang penting lokasinya (X2). --}}
+                                            <div class="text-sm text-slate-700">{{ $asset->location }}</div>
+                                            <div class="text-xs text-slate-400">{{ __('Lokasi CCTV') }}</div>
                                         @else
                                             <span class="text-sm text-slate-400">—</span>
                                         @endif

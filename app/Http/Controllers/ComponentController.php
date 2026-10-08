@@ -62,7 +62,7 @@ class ComponentController extends Controller
     {
         return view('parts.create', [
             'categories' => ComponentCategory::options(),
-            'specMap' => $this->specMap(),
+            'specMap' => ComponentCategory::specMap(),
         ]);
     }
 
@@ -113,7 +113,7 @@ class ComponentController extends Controller
         return view('parts.edit', [
             'part' => $component,
             'statuses' => ComponentStatus::options(),
-            'specMap' => $this->specMap(),
+            'specMap' => ComponentCategory::specMap(),
         ]);
     }
 
@@ -176,44 +176,5 @@ class ComponentController extends Controller
         return redirect()
             ->route('components.show', $component)
             ->with('success', 'Komponen '.$component->component_code.' berhasil dipulihkan.');
-    }
-
-    /**
-     * Peta key spesifikasi + label + placeholder per kategori, untuk form.
-     *
-     * @return array<string, array{label: string, keys: array<string, array{label: string, placeholder: string}>}>
-     */
-    private function specMap(): array
-    {
-        $map = [];
-
-        foreach (ComponentCategory::cases() as $category) {
-            $essential = [];
-            $advanced = [];
-
-            foreach ($category->specKeys() as $key) {
-                $essential[$key] = [
-                    'label' => ComponentCategory::specLabel($key),
-                    'placeholder' => $category->specPlaceholders()[$key] ?? '',
-                    'options' => ComponentCategory::optionsFor($key, $category),
-                ];
-            }
-
-            foreach ($category->advancedSpecKeys() as $key) {
-                $advanced[$key] = [
-                    'label' => ComponentCategory::specLabel($key),
-                    'placeholder' => $category->specPlaceholders()[$key] ?? '',
-                    'options' => ComponentCategory::optionsFor($key, $category),
-                ];
-            }
-
-            $map[$category->value] = [
-                'label' => $category->label(),
-                'keys' => $essential,
-                'advanced' => $advanced,
-            ];
-        }
-
-        return $map;
     }
 }

@@ -208,8 +208,29 @@ class UiRegressionTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        // Tooltip (title) memuat label kategori, bukan hanya nilai mentah.
-        $this->assertMatchesRegularExpression('/title="[^"]*RAM:[^"]*"/', $html);
+        // Tooltip (aria-label) memuat label kategori, bukan hanya nilai mentah.
+        // X1: `title` bawaan browser diganti tooltip Alpine, jadi diperiksa
+        // lewat `aria-label` yang isinya sama.
+        $this->assertMatchesRegularExpression('/aria-label="[^"]*RAM:[^"]*"/', $html);
+    }
+
+    /**
+     * Ringkasan spesifikasi memakai tooltip instan, bukan `title` bawaan.
+     */
+    public function test_asset_index_uses_instant_tooltip(): void
+    {
+        Asset::factory()->create();
+
+        $html = $this->actingAs(User::factory()->admin()->create())
+            ->get(route('assets.index'))
+            ->assertOk()
+            ->getContent();
+
+        // Tidak ada lagi `title` bawaan pada sel spesifikasi.
+        $this->assertStringNotContainsString('title="Belum ada komponen terpasang."', $html);
+        // Komponen tooltip Alpine dirender.
+        $this->assertStringContainsString('itamTooltip()', $html);
+        $this->assertStringContainsString('x-teleport="body"', $html);
     }
 
     /**

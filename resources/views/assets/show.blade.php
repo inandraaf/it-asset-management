@@ -145,6 +145,11 @@
                     $info[] = ['label' => __('MAC Address'), 'value' => $asset->mac_address ?? '—', 'mono' => true];
                     $info[] = ['label' => __('IP Address'), 'value' => $asset->ip_address ?? '—', 'mono' => true];
 
+                    // Lokasi fisik hanya untuk CCTV (X2).
+                    if ($asset->type->supportsLocation()) {
+                        $info[] = ['label' => __('Lokasi'), 'value' => $asset->location ?? '—'];
+                    }
+
                     if ($asset->type->isComputer()) {
                         $info[] = ['label' => __('Sistem Operasi'), 'value' => $asset->osLabel()];
                     }
@@ -300,14 +305,14 @@
                     <x-slot name="actions">
                         @if ($installedComponents->isNotEmpty())
                             <a href="{{ route('components.bulk-move.create', $asset) }}">
-                                <x-secondary-button type="button">{{ __('Pindah Massal') }}</x-secondary-button>
+                                <x-secondary-button type="button">{{ __('Pindah Komponen') }}</x-secondary-button>
                             </a>
                             <a href="{{ route('components.bulk-remove.create', $asset) }}">
-                                <x-secondary-button type="button">{{ __('Lepas Massal') }}</x-secondary-button>
+                                <x-secondary-button type="button">{{ __('Lepas Komponen') }}</x-secondary-button>
                             </a>
                         @endif
                         <a href="{{ route('components.bulk-install.create', $asset) }}">
-                            <x-primary-button type="button">{{ __('Pasang Massal') }}</x-primary-button>
+                            <x-primary-button type="button">{{ __('Pasang Komponen') }}</x-primary-button>
                         </a>
                     </x-slot>
                 @endif

@@ -36,6 +36,69 @@ Chart.register(
 window.Chart = Chart;
 
 window.Alpine = Alpine;
+
+/**
+ * Penempat tooltip instan yang dipakai bersama.
+ *
+ * Tooltip dirender ke `body` dengan `position: fixed`, jadi posisinya dihitung
+ * dari `getBoundingClientRect()` sel pemicu. Dipakai oleh komponen Blade
+ * `<x-spec-tooltip>` (tabel aset & komponen) agar logika tidak ditulis dua kali.
+ */
+window.itamTooltip = () => ({
+    open: false,
+    top: 0,
+    left: 0,
+    maxWidth: 0,
+    margin: 12,
+    gap: 8,
+    placement: 'bottom',
+
+    /**
+     * Hitung posisi kiri/atas dan simpan referensi sel pemicu.
+     * `$el` adalah elemen pembungkus (div) dari komponen.
+     */
+    place($el) {
+        const rect = $el.getBoundingClientRect();
+
+        this.maxWidth = Math.min(560, window.innerWidth - this.margin * 2);
+        this.left = Math.max(
+            this.margin,
+            Math.min(rect.left, window.innerWidth - this.maxWidth - this.margin),
+        );
+        this.top = rect.bottom + this.gap;
+        this.placement = 'bottom';
+    },
+
+    show($el) {
+        this.place($el);
+        this.open = true;
+
+        // Setelah tooltip tampil, ukur tingginya lalu balik ke atas bila ruang
+        // di bawah tidak cukup.
+        this.$nextTick(() => {
+            const tip = this.$refs.tip;
+
+            if (!tip) {
+                return;
+            }
+
+            const rect = $el.getBoundingClientRect();
+            const height = tip.offsetHeight;
+
+            if (
+                rect.bottom + this.gap + height > window.innerHeight - this.margin
+                && rect.top - this.gap - height >= this.margin
+            ) {
+                this.top = rect.top - this.gap - height;
+                this.placement = 'top';
+            }
+        });
+    },
+
+    hide() {
+        this.open = false;
+    },
+});
 window.Swal = Swal;
 
 /**

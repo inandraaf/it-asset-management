@@ -49,6 +49,7 @@ class Asset extends Model
         'department_id',
         'mac_address',
         'ip_address',
+        'location',
         'specs',
         'status',
         'created_by',
@@ -210,8 +211,8 @@ class Asset extends Model
         foreach ($installation as $item) {
             $component = $item->component;
             $label = $component->category->label();
-            // Nilai ganda digabung: "RAM: 8GB DDR4 x2".
-            $key = $label.': '.$component->essentialSummary();
+            // Nilai ganda digabung: "RAM: Kingston 8GB DDR4 x2".
+            $key = $label.': '.$component->brandedSummary();
             $parts[$key] = ($parts[$key] ?? 0) + 1;
         }
 
@@ -221,7 +222,7 @@ class Asset extends Model
 
         return collect($parts)
             ->map(fn (int $count, string $label) => $count > 1 ? $label.' x'.$count : $label)
-            ->implode(' · ');
+            ->implode(' | ');
     }
 
     /**
@@ -234,7 +235,9 @@ class Asset extends Model
      * - **T2**: kategori prioritas tetap (motherboard, CPU, RAM, storage, GPU);
      *   kategori lain hanya muncul bila slot masih tersisa.
      * - **T3/FB-3**: memakai `Component::essentialSummary()` sehingga yang tampil
-     *   atribut teknis (kapasitas RAM/disk, seri CPU), bukan merek.
+     *   atribut teknis (kapasitas RAM/disk, seri CPU).
+     * - **X1**: ditambah **merek** (`Component::brandedSummary()`) dan pemisah
+     *   antar komponen memakai ` | ` agar mudah dipisah saat dibaca.
      */
     public function hardwareSummary(int $limit = 4): string
     {
@@ -251,12 +254,12 @@ class Asset extends Model
         foreach (self::SUMMARY_CATEGORY_ORDER as $category) {
             $values = $installations
                 ->filter(fn (ComponentInstallation $i) => $i->component->category->value === $category)
-                ->map(fn (ComponentInstallation $i) => $i->component->essentialSummary())
+                ->map(fn (ComponentInstallation $i) => $i->component->brandedSummary())
                 ->filter()
                 ->values();
 
             if ($values->isNotEmpty()) {
-                // Gabungkan nilai identik: 2 keping 8GB DDR4 → "8GB DDR4 x2".
+                // Gabungkan nilai identik: 2 keping 8GB DDR4 → "Kingston 8GB DDR4 x2".
                 $priority[] = $values->countBy()
                     ->map(fn (int $count, string $label) => $count > 1 ? $label.' x'.$count : $label)
                     ->values()
@@ -271,7 +274,7 @@ class Asset extends Model
                 self::SUMMARY_CATEGORY_ORDER,
                 true
             ))
-            ->map(fn (ComponentInstallation $i) => $i->component->essentialSummary())
+            ->map(fn (ComponentInstallation $i) => $i->component->brandedSummary())
             ->filter()
             ->countBy()
             ->map(fn (int $count, string $label) => $count > 1 ? $label.' x'.$count : $label)
@@ -282,7 +285,7 @@ class Asset extends Model
 
         return $values === []
             ? '—'
-            : implode(' · ', $values);
+            : implode(' | ', $values);
     }
 
     /**

@@ -15,10 +15,17 @@ use Illuminate\Validation\Rule;
  * Kode aset TIDAK diterima dari form: selalu dibuat sistem lewat
  * CodeGenerator agar tidak ada tabrakan atau human error.
  *
+ * Sejak X3, form ini juga boleh membawa komponen yang langsung dirakit
+ * (lihat ValidatesComponentAssembly) — disimpan oleh `AssetController::store`
+ * di dalam transaksi yang sama.
+ *
  * @see dokumentasi/10-validasi.md §5
+ * @see dokumentasi/15-feedback-dan-tindak-lanjut.md X3
  */
 class StoreAssetRequest extends FormRequest
 {
+    use ValidatesComponentAssembly;
+
     public function authorize(): bool
     {
         return true;
@@ -43,6 +50,7 @@ class StoreAssetRequest extends FormRequest
             'specs' => ['nullable', 'array'],
             ...$this->specRules(),
             'status' => ['sometimes', Rule::enum(AssetStatus::class)],
+            ...$this->componentAssemblyRules(),
         ];
     }
 
@@ -88,6 +96,9 @@ class StoreAssetRequest extends FormRequest
                 $type?->requiresDepartment() ? 'required' : 'nullable',
                 'integer', Rule::exists('departments', 'id'),
             ],
+            // Lokasi fisik hanya untuk CCTV (X2); jenis lain dinolkan di
+            // prepareForValidation.
+            'location' => ['nullable', 'string', 'max:150'],
         ];
 
         if ($type === null) {
@@ -110,6 +121,8 @@ class StoreAssetRequest extends FormRequest
     {
         $normalize = fn (?string $v) => ($v === null || trim($v) === '') ? null : trim($v);
 
+        $type = AssetType::tryFrom((string) $this->input('type'));
+
         $this->merge([
             'brand' => trim((string) $this->input('brand')) ?: null,
             'hostname' => $normalize($this->input('hostname')) === null
@@ -119,6 +132,8 @@ class StoreAssetRequest extends FormRequest
                 ? strtoupper(trim((string) $this->input('mac_address')))
                 : $this->input('mac_address'),
             'ip_address' => $normalize($this->input('ip_address')),
+            // Lokasi hanya bermakna untuk CCTV (X2).
+            'location' => $type?->supportsLocation() ? $normalize($this->input('location')) : null,
             'specs' => $this->normalizedSpecs(),
         ]);
     }
@@ -157,6 +172,7 @@ class StoreAssetRequest extends FormRequest
             'ip_address.unique' => 'IP Address sudah dipakai aset lain.',
             'ip_address.ip' => 'Format IP Address tidak valid.',
             'specs.cpu.required' => 'Spesifikasi CPU wajib diisi.',
+            ...$this->componentAssemblyMessages(),
         ];
     }
 }
