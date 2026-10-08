@@ -213,6 +213,11 @@ Desain lengkap: [14-manajemen-komponen.md](14-manajemen-komponen.md).
 > | Test | 157 lulus (446 assertions) |
 > | Pint | PASS (117 file) |
 
+> **Catatan:** angka di atas adalah **snapshot saat MVP (M7)** dan sengaja dibiarkan
+> sebagai catatan historis. Angka final setelah Fase 2 & 3 (komponen + umpan balik
+> FB-1…FB-8, T1–T7, R1–R6, S1–S5, U1–U4, V1–V2, W1–W4b) ada di §Catatan Audit Final
+> di bawah.
+
 ## 5. Rencana Pengujian
 
 | Level | Cakupan | Alat |
@@ -377,6 +382,32 @@ Rincian di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) 
 | W1 | Bug spesifikasi RAM/Storage hilang saat input (duplikat `name`) | ✅ |
 | W2 | Tombol Back menampilkan form basi → risiko duplikat | ✅ |
 | W3 | Urutan daftar stabil + aset/komponen baru disorot sekali | ✅ |
+| W4 | Urutan daftar menurut jenis (PC → Laptop → CCTV → Printer), lalu kode aset | ✅ |
+| W4b | Seeder idempoten walau MAC kosong (kunci pindah ke `hostname`) | ✅ |
+
+## 6d. Catatan Audit Final (setelah Fase 2 & 3)
+
+Angka final seluruh proyek, dijalankan **setelah semua item FB-1…FB-8, T1–T7, R1–R6,
+S1–S5, U1–U4, V1–V2, dan W1–W4b selesai**.
+
+| Audit | Hasil |
+| --- | --- |
+| Test | **362 lulus** (1140 assertions), 24 berkas test |
+| Deprecation | 2 (dari PHP 8.5: `PDO::MYSQL_ATTR_SSL_CA` di `config/database.php`) — **bukan kegagalan** |
+| Pint | **PASS (160 file)** |
+| Seeder | PC=10 · Laptop=6 · CCTV=3 · Printer=2 — total **21 aset**; idempoten (dijalankan 2× tidak menggandakan) |
+
+**Cara menjalankan ulang:**
+
+```bash
+DB_HOST=127.0.0.1 php artisan test    # Postgres Docker: nama host "postgres16" tidak resolvable dari host
+./vendor/bin/pint --test
+```
+
+> Catatan: `DB_HOST` di `.env` adalah `postgres16` (nama service Docker). Dari terminal host,
+> nama itu tidak bisa di-resolve sehingga seluruh test gagal dengan
+> `could not translate host name "postgres16"`. Override ke `127.0.0.1` saat menjalankan test
+> dari host, karena port `5432` sudah dipublikasikan ke localhost.
 
 ## 7. Risiko & Mitigasi
 

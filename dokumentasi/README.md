@@ -117,6 +117,8 @@ dengan riwayat pemasangan. Lihat [14-manajemen-komponen.md](14-manajemen-kompone
 - [x] W1 Perbaikan bug spesifikasi RAM/Storage hilang saat input
 - [x] W2 Tombol Back tidak lagi menampilkan form basi (anti duplikat)
 - [x] W3 Urutan daftar stabil (kode aset) + aset baru disorot sekali
+- [x] W4 Urutan daftar menurut jenis (PC → Laptop → CCTV → Printer), lalu kode aset
+- [x] W4b Seeder idempoten walau MAC kosong (kunci pindah ke `hostname`)
 
 Rincian, analisis, dan prioritasnya di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md).
 

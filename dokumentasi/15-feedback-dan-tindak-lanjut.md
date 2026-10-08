@@ -538,7 +538,7 @@ tombol Back ditekan.
 #### Akar Penyebab
 
 Urutan hanya memakai `orderByDesc('created_at')` **tanpa tie-breaker**.
-Seeder membuat **16 aset pada detik yang sama** (`created_at` identik), sehingga
+Seeder membuat **21 aset pada detik yang sama** (`created_at` identik), sehingga
 PostgreSQL bebas mengurutkan baris yang seri. Akibatnya:
 
 - Urutan antar aset tidak dapat diprediksi.
@@ -551,6 +551,12 @@ PostgreSQL bebas mengurutkan baris yang seri. Akibatnya:
 | Kunjungan biasa | **Kode aset** (`asset_code` ASC, `id` ASC) — stabil & mudah dicari |
 | Baru saja dibuat | Aset itu **di baris pertama + disorot**, sekali saja |
 | Refresh / pindah halaman lalu kembali | Kembali ke urutan kode (highlight hilang) |
+
+> **Catatan:** saat W3 dikerjakan, default-nya murni **kode aset**. Pengelompokan **per jenis**
+> ditambahkan kemudian di [W4](#w4--urutan-menurut-jenis-lalu-kode-aset), sehingga urutan final
+> yang berlaku sekarang adalah **Jenis (PC → Laptop → CCTV → Printer)**, lalu kode aset.
+
+> Untuk pengelompokan per jenis (PC → Laptop → CCTV → Printer), lihat [W4](#w4--urutan-menurut-jenis-lalu-kode-aset).
 
 #### Implementasi
 
@@ -571,6 +577,107 @@ Pola yang sama diterapkan pada daftar **komponen** (`component_code` + `highligh
 | --- | --- |
 | Pertama setelah simpan | `PC-2026-0011` **[SOROT]** · LT-2026-0001 · LT-2026-0002 |
 | Setelah refresh | LT-2026-0001 · LT-2026-0002 · LT-2026-0003 |
+
+#### Regression Test
+
+`ListingOrderTest` — `test_asset_list_is_ordered_by_asset_code`,
+`test_order_is_stable_when_timestamps_are_identical`, `test_component_list_is_ordered_by_component_code`,
+`test_new_asset_appears_first_on_first_visit`, `test_highlight_is_consumed_after_one_visit`,
+`test_no_highlight_on_normal_visit`.
+
+> **Catatan:** urutan **per jenis** (PC → Laptop → CCTV → Printer) baru ditambahkan kemudian
+> sebagai W4, dan **tabel Verifikasi di atas adalah snapshot saat W3 saja**. Jadi
+> `Setelah refresh` menampilkan `LT-…` lebih dulu karena W3 belum mengelompokkan jenis —
+> setelah W4, urutan itu menjadi dimulai dari `PC-…`. Lihat [W4](#w4--urutan-menurut-jenis-lalu-kode-aset).
+
+### W4 — Urutan Menurut Jenis, Lalu Kode Aset
+
+**Gejala lanjutan:** setelah W3, daftar sudah stabil menurut kode aset, tetapi **jenis jadi
+bercampur** — `CCTV-2026-0001`, `LT-2026-0001`, `PC-2026-0001`, `PRN-2026-0001` berselang-seling.
+Sulit dipindai saat Admin IT mencari "PC mana saja yang ada".
+
+#### Konsep yang Dipilih
+
+| Tingkat | Urutan |
+| --- | --- |
+| 1 (utama) | **Jenis aset**: PC → Laptop → CCTV → Printer |
+| 2 | **Kode aset** (`asset_code` ASC) |
+| 3 (tie-breaker) | `id` ASC |
+
+Highlight W3 tetap **menang** di atas urutan jenis: aset yang baru dibuat naik ke baris pertama
+apa pun jenisnya.
+
+#### Implementasi
+
+Urutan jenis tidak ditulis langsung di query, melainkan **terpusat di enum** agar tidak
+tersebar dan mudah diubah:
+
+```php
+// app/Enums/AssetType.php
+public function sortOrder(): int { /* PC=1, Laptop=2, CCTV=3, Printer=4 */ }
+
+public static function sqlSortCase(string $column = 'type'): string
+{
+    // CASE WHEN type = 'PC' THEN 1 ... ELSE 99 END
+}
+```
+
+`AssetController::index()` memakainya sebagai tingkat pertama, setelah baris highlight:
+
+```php
+->when($highlightId, fn ($query) => $query
+    ->orderByRaw('CASE WHEN assets.id = ? THEN 0 ELSE 1 END', [$highlightId]))
+->orderByRaw(AssetType::sqlSortCase('assets.type'))
+->orderBy('asset_code')
+->orderBy('id')
+```
+
+`ELSE 99 END` menaruh jenis yang tidak dikenal (mis. data lama) di **paling akhir**, bukan
+di tengah, sehingga baris tak terduga tidak mengacak urutan 4 jenis utama.
+
+#### Verifikasi
+
+Test `ListingOrderTest::test_assets_are_ordered_by_type_then_code` membuat aset **terbalik**
+dari urutan harapan (Printer, CCTV, Laptop, PC) dan memastikan tampilannya tetap
+PC → Laptop → CCTV → Printer, lalu kode. `test_highlight_still_wins_over_type_ordering`
+memastikan Printer yang baru dibuat tetap muncul di baris pertama.
+
+**Regression Test:** `ListingOrderTest::test_asset_types_have_canonical_sort_order`,
+`test_sql_sort_case_puts_unknown_types_last`, `test_assets_are_ordered_by_type_then_code`.
+
+### W4b — Seeder Idempoten walau MAC Kosong
+
+**Gejala:** setelah Printer/CCTV ditambahkan (FB-4), sebagian aset **tidak pernah muncul**
+saat `db:seed` dijalankan. PC dan Laptop lengkap; **Printer tidak pernah dibuat** karena
+MAC-nya kosong.
+
+#### Akar Penyebab
+
+Seeder memakai **`mac_address` sebagai kunci idempoten** (`Asset::where('mac_address', $mac)`),
+padahal CCTV boleh **tanpa MAC** dan Printer **tidak perlu MAC** (lihat [FB-4](#fb-4--tambah-jenis-aset-cctv--printer)).
+Ketika `$mac` bernilai `null`, pencarian menjadi `WHERE mac_address IS NULL` — yang **cocok
+dengan aset pertama yang MAC-nya kosong**, bukan dengan aset yang dimaksud. Baris berikutnya
+lalu dianggap "sudah ada" dan dilewati.
+
+#### Perbaikan
+
+Kunci idempoten diganti ke **`hostname`** (yang selalu unik dan selalu ada, termasuk untuk
+CCTV/Printer), dinormalisasi lowercase:
+
+```php
+$asset = Asset::where('hostname', strtolower($hostname))->first();
+```
+
+#### Verifikasi
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| Semua jenis terbuat | PC=10 · Laptop=6 · CCTV=3 · Printer=2 (total **21**) |
+| Seeder dijalankan 2× | Jumlah aset **tidak bertambah** (idempoten) |
+
+**Regression Test:** `ListingOrderTest::test_seeder_creates_all_asset_types`,
+`test_seeder_is_idempotent_with_null_mac_addresses`, `test_seeder_gives_printers_a_department`,
+`test_cctv_may_have_null_mac`.
 
 ### T6 — Struktur Sidebar
 

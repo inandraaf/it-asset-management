@@ -20,10 +20,12 @@ use Illuminate\Support\Facades\DB;
  * Kode aset tetap dibuat lewat CodeGenerator (bukan ditulis manual) agar
  * seeder menghasilkan data yang sama seperti alur aplikasi sebenarnya.
  *
- * Idempoten: kunci alami adalah `mac_address`. Menjalankan ulang tidak
- * menggandakan data dan tidak mengubah kode aset yang sudah ada.
+ * Idempoten: kunci alami adalah `hostname` (selalu ada dan unik, termasuk untuk
+ * CCTV/Printer yang boleh tanpa MAC). Menjalankan ulang tidak menggandakan data
+ * dan tidak mengubah kode aset yang sudah ada.
  *
  * @see dokumentasi/06-manajemen-aset.md
+ * @see dokumentasi/15-feedback-dan-tindak-lanjut.md W4b
  */
 class AssetSeeder extends Seeder
 {
