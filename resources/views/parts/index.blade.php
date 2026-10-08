@@ -92,7 +92,10 @@
                         <tbody class="divide-y divide-slate-100">
                             @foreach ($components as $item)
                                 @php($host = $item->activeInstallation?->asset)
-                                <tr class="transition hover:bg-slate-50">
+                                {{-- Baris yang baru dibuat disorot sekali (W3). --}}
+                                <tr data-highlighted="{{ $highlightId === $item->id ? 'true' : 'false' }}"
+                                    class="transition hover:bg-slate-50
+                                           {{ $highlightId === $item->id ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-500' : '' }}">
                                     <td class="whitespace-nowrap px-5 py-3.5">
                                         <a href="{{ route('components.show', $item) }}"
                                            class="font-mono text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline">

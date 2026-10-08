@@ -28,6 +28,11 @@ class AssetController extends Controller
     {
         $filter = $this->componentFilter($request);
 
+        // Aset yang baru dibuat ditampilkan di baris pertama SEKALI saja.
+        // `pull()` menghapus nilainya, sehingga refresh / kembali ke halaman
+        // ini berikutnya otomatis kembali ke urutan kode aset (W3).
+        $highlightId = session()->pull('highlight_asset_id');
+
         $assets = Asset::query()
             ->with([
                 'activeAssignment.employee.department',
@@ -67,7 +72,13 @@ class AssetController extends Controller
             // Filter komponen terpasang: satu kategori, satu nilai (R2).
             ->when($filter, fn ($query) => $query
                 ->where(fn ($w) => $this->applyComponentFilter($w, $filter[0], $filter[1], $filter[2])))
-            ->orderByDesc('created_at')
+            // Urutan tetap: jenis (PC → Laptop → CCTV → Printer), lalu kode aset.
+            // `id` sebagai tie-breaker agar deterministik walau kode sama.
+            ->when($highlightId, fn ($query) => $query
+                ->orderByRaw('CASE WHEN assets.id = ? THEN 0 ELSE 1 END', [$highlightId]))
+            ->orderByRaw(AssetType::sqlSortCase('assets.type'))
+            ->orderBy('asset_code')
+            ->orderBy('id')
             ->paginate(20)
             ->withQueryString();
 
@@ -80,6 +91,7 @@ class AssetController extends Controller
             'types' => AssetType::options(),
             // Filter bertingkat: Kategori → Atribut → Nilai (V1).
             'componentFilterTree' => Component::filterTree(),
+            'highlightId' => $highlightId,
         ]);
     }
 
@@ -201,6 +213,9 @@ class AssetController extends Controller
 
             return Asset::create($data);
         });
+
+        // Tandai aset ini agar tampil teratas pada kunjungan pertama ke daftar.
+        session()->put('highlight_asset_id', $asset->id);
 
         return redirect()
             ->route('assets.show', $asset)

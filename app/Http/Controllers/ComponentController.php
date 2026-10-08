@@ -24,6 +24,9 @@ class ComponentController extends Controller
 
     public function index(Request $request): View
     {
+        // Komponen baru tampil teratas SEKALI saja (W3); berikutnya urut kode.
+        $highlightId = session()->pull('highlight_component_id');
+
         $components = Component::query()
             ->with('activeInstallation.asset')
             ->when($request->filled('q'), function ($query) use ($request) {
@@ -39,7 +42,11 @@ class ComponentController extends Controller
                 ->where('category', $request->string('category')))
             ->when($request->filled('status'), fn ($query) => $query
                 ->where('status', $request->string('status')))
-            ->orderByDesc('created_at')
+            // Urutan tetap: kode komponen.
+            ->when($highlightId, fn ($query) => $query
+                ->orderByRaw('CASE WHEN components.id = ? THEN 0 ELSE 1 END', [$highlightId]))
+            ->orderBy('component_code')
+            ->orderBy('id')
             ->paginate(20)
             ->withQueryString();
 
@@ -47,6 +54,7 @@ class ComponentController extends Controller
             'components' => $components,
             'categories' => ComponentCategory::options(),
             'statuses' => ComponentStatus::options(),
+            'highlightId' => $highlightId,
         ]);
     }
 
@@ -71,6 +79,8 @@ class ComponentController extends Controller
 
             return Component::create($data);
         });
+
+        session()->put('highlight_component_id', $component->id);
 
         return redirect()
             ->route('components.show', $component)

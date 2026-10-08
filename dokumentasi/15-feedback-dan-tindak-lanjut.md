@@ -530,6 +530,48 @@ memulihkan nilai field dari riwayat.
 Diuji pada `/assets/create` dan `/components/create`: keduanya kembali **kosong** setelah
 tombol Back ditekan.
 
+### W3 — Urutan Daftar Aset
+
+**Gejala:** setelah menambah aset baru, urutan daftar terlihat acak — mis.
+`CC1, PC2, PC3, PC4, PC1, LT1` — dan aset pertama "turun jauh ke bawah".
+
+#### Akar Penyebab
+
+Urutan hanya memakai `orderByDesc('created_at')` **tanpa tie-breaker**.
+Seeder membuat **16 aset pada detik yang sama** (`created_at` identik), sehingga
+PostgreSQL bebas mengurutkan baris yang seri. Akibatnya:
+
+- Urutan antar aset tidak dapat diprediksi.
+- Paginasi berisiko **menggandakan atau melewatkan** baris.
+
+#### Konsep yang Dipilih
+
+| Kondisi | Urutan |
+| --- | --- |
+| Kunjungan biasa | **Kode aset** (`asset_code` ASC, `id` ASC) — stabil & mudah dicari |
+| Baru saja dibuat | Aset itu **di baris pertama + disorot**, sekali saja |
+| Refresh / pindah halaman lalu kembali | Kembali ke urutan kode (highlight hilang) |
+
+#### Implementasi
+
+1. **Default**: `orderBy('asset_code')->orderBy('id')` — `id` sebagai tie-breaker agar
+   benar-benar deterministik walau `created_at` sama.
+2. **Highlight sekali pakai**: saat `store`, simpan `session()->put('highlight_asset_id', $id)`.
+   Di `index`, `session()->pull('highlight_asset_id')` — `pull()` **menghapus** nilainya,
+   sehingga kunjungan berikutnya otomatis normal.
+3. **Urutan saat highlight**: `orderByRaw('CASE WHEN assets.id = ? THEN 0 ELSE 1 END')`
+   agar aset baru naik ke atas tanpa mengubah urutan sisanya.
+4. **Sorotan visual**: baris diberi `data-highlighted="true"` + `bg-indigo-50 ring-indigo-500`.
+
+Pola yang sama diterapkan pada daftar **komponen** (`component_code` + `highlight_component_id`).
+
+#### Verifikasi Browser (CDP)
+
+| Kunjungan | Urutan 3 teratas |
+| --- | --- |
+| Pertama setelah simpan | `PC-2026-0011` **[SOROT]** · LT-2026-0001 · LT-2026-0002 |
+| Setelah refresh | LT-2026-0001 · LT-2026-0002 · LT-2026-0003 |
+
 ### T6 — Struktur Sidebar
 
 ```

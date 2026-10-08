@@ -116,6 +116,7 @@ dengan riwayat pemasangan. Lihat [14-manajemen-komponen.md](14-manajemen-kompone
 - [x] V2 Dropdown Atribut hanya untuk Storage
 - [x] W1 Perbaikan bug spesifikasi RAM/Storage hilang saat input
 - [x] W2 Tombol Back tidak lagi menampilkan form basi (anti duplikat)
+- [x] W3 Urutan daftar stabil (kode aset) + aset baru disorot sekali
 
 Rincian, analisis, dan prioritasnya di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md).
 

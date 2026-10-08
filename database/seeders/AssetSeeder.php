@@ -6,6 +6,7 @@ use App\Enums\AssetStatus;
 use App\Enums\AssetType;
 use App\Models\Asset;
 use App\Models\AssetAssignment;
+use App\Models\Department;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\CodeGenerator;
@@ -150,6 +151,44 @@ class AssetSeeder extends Seeder
                 'gpu' => 'Intel UHD Graphics', 'os' => 'Windows 10 Pro 64-bit'],
             AssetStatus::InRepair, null,
         ],
+
+        // --- CCTV (tanpa pemilik, tanpa MAC wajib) ---
+        [
+            'CCTV', 'Hikvision DS-2CD2143G2', 'CCTV-EDP-01', 'CC:33:00:00:00:01', '192.168.20.11',
+            ['os' => 'Firmware v5.7'],
+            AssetStatus::Available, null,
+        ],
+        [
+            'CCTV', 'Hikvision DS-2CD2143G2', 'CCTV-EDP-02', 'CC:33:00:00:00:02', '192.168.20.12',
+            ['os' => 'Firmware v5.7'],
+            AssetStatus::Available, null,
+        ],
+        [
+            'CCTV', 'Dahua IPC-HFW1230S', 'CCTV-CC-01', null, '192.168.20.21',
+            ['os' => 'Firmware v4.0'],
+            AssetStatus::InRepair, null,
+        ],
+
+        // --- Printer (melekat departemen) ---
+        [
+            'Printer', 'Epson L3210', 'PRN-HRGA-01', null, '192.168.30.11',
+            ['os' => 'Firmware 1.2'],
+            AssetStatus::Available, null,
+        ],
+        [
+            'Printer', 'HP LaserJet M404dn', 'PRN-EDP-01', null, '192.168.30.12',
+            ['os' => 'Firmware 2.1'],
+            AssetStatus::Available, null,
+        ],
+    ];
+
+    /**
+     * Aset departemen: hostname => nama departemen pemilik.
+     * Printer melekat departemen; CCTV tanpa pemilik (tanggung jawab Admin IT).
+     */
+    private const DEPARTMENT_OWNED = [
+        'prn-hrga-01' => 'HRGA',
+        'prn-edp-01' => 'EDP',
     ];
 
     /**
@@ -175,7 +214,10 @@ class AssetSeeder extends Seeder
         $byHostname = [];
 
         foreach (self::ASSETS as [$type, $brand, $hostname, $mac, $ip, $specs, $status, $holderNip]) {
-            $asset = Asset::where('mac_address', $mac)->first()
+            // Idempoten berdasarkan HOSTNAME, bukan MAC: Printer/CCTV boleh
+            // tidak punya MAC, sehingga mencari `mac_address = null` akan
+            // keliru menemukan aset lain.
+            $asset = Asset::where('hostname', strtolower($hostname))->first()
                 ?? DB::transaction(fn () => Asset::create([
                     'asset_code' => $generator->next(AssetType::from($type)),
                     'type' => $type,
@@ -189,6 +231,13 @@ class AssetSeeder extends Seeder
                     'status' => $status,
                     'created_by' => $adminId,
                 ]));
+
+            // Printer melekat pada departemen; CCTV tanpa pemilik.
+            if ($deptName = self::DEPARTMENT_OWNED[strtolower($hostname)] ?? null) {
+                $asset->update([
+                    'department_id' => Department::where('nama_dept', $deptName)->value('id'),
+                ]);
+            }
 
             $byHostname[$hostname] = [$asset, $holderNip];
         }

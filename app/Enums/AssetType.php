@@ -19,6 +19,38 @@ enum AssetType: string
     case Printer = 'Printer';
 
     /**
+     * Urutan tampilan daftar aset: PC → Laptop → CCTV → Printer.
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md W4
+     */
+    public function sortOrder(): int
+    {
+        return match ($this) {
+            self::PC => 1,
+            self::Laptop => 2,
+            self::Cctv => 3,
+            self::Printer => 4,
+        };
+    }
+
+    /**
+     * Ekspresi SQL `CASE` untuk mengurutkan kolom `type` sesuai sortOrder().
+     *
+     * Dipakai agar urutan kategori terpusat di enum, tidak tersebar di query.
+     *
+     * @param  string  $column  Nama kolom (mis. 'assets.type')
+     */
+    public static function sqlSortCase(string $column = 'type'): string
+    {
+        $cases = collect(self::cases())
+            ->map(fn (self $case) => "WHEN {$column} = '".$case->value."' THEN ".$case->sortOrder())
+            ->implode(' ');
+
+        // Jenis tak dikenal ditaruh paling akhir.
+        return "CASE {$cases} ELSE 99 END";
+    }
+
+    /**
      * Prefix yang dipakai saat generate kode aset.
      */
     public function codePrefix(): string

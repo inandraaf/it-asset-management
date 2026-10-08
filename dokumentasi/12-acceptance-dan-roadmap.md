@@ -376,6 +376,7 @@ Rincian di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) 
 | V2 | Dropdown Atribut hanya tampil untuk Storage | ✅ |
 | W1 | Bug spesifikasi RAM/Storage hilang saat input (duplikat `name`) | ✅ |
 | W2 | Tombol Back menampilkan form basi → risiko duplikat | ✅ |
+| W3 | Urutan daftar stabil + aset/komponen baru disorot sekali | ✅ |
 
 ## 7. Risiko & Mitigasi
 

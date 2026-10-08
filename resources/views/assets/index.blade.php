@@ -199,7 +199,10 @@
                         <tbody class="divide-y divide-slate-100">
                             @foreach ($assets as $asset)
                                 @php($holder = $asset->activeAssignment?->employee)
-                                <tr class="transition hover:bg-slate-50">
+                                {{-- Baris yang baru dibuat disorot sekali (W3). --}}
+                                <tr data-highlighted="{{ $highlightId === $asset->id ? 'true' : 'false' }}"
+                                    class="transition hover:bg-slate-50
+                                           {{ $highlightId === $asset->id ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-500' : '' }}">
                                     <td class="whitespace-nowrap px-5 py-3.5">
                                         <a href="{{ route('assets.show', $asset) }}"
                                            class="font-mono text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
