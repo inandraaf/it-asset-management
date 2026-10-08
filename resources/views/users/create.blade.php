@@ -5,7 +5,7 @@
     </x-slot>
 
     <div class="mx-auto max-w-2xl">
-        <form method="POST" action="{{ route('users.store') }}" class="space-y-6">
+        <form method="POST" action="{{ route('users.store') }}" autocomplete="off" class="space-y-6">
             @csrf
 
             <x-card :title="__('Data Akun')">

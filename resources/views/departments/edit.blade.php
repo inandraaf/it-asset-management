@@ -7,7 +7,7 @@
     </x-slot>
 
     <div class="mx-auto max-w-2xl">
-        <form method="POST" action="{{ route('departments.update', $department) }}" class="space-y-6">
+        <form method="POST" action="{{ route('departments.update', $department) }}" autocomplete="off" class="space-y-6">
             @csrf
             @method('put')
 

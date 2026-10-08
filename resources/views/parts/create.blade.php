@@ -8,7 +8,7 @@
 
     <div class="mx-auto max-w-3xl space-y-6"
          x-data="{ category: @js(old('category', 'ram')) }">
-        <form method="POST" action="{{ route('components.store') }}" class="space-y-6">
+        <form method="POST" action="{{ route('components.store') }}" autocomplete="off" class="space-y-6">
             @csrf
 
             <x-card :title="__('Identitas Komponen')">

@@ -59,9 +59,9 @@ class UserSeeder extends Seeder
         }
 
         $viewer = User::updateOrCreate(
-            ['username' => 'viewer'],
+            ['username' => 'andi.edp'],
             [
-                'name' => 'Viewer Manager',
+                'name' => 'Andi Kurniawan',
                 'password' => Hash::make($viewerPassword),
             ]
         );

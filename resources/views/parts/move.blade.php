@@ -35,7 +35,7 @@
             </dl>
         </x-card>
 
-        <form method="POST" action="{{ route('components.move.store', $part) }}" class="space-y-6">
+        <form method="POST" action="{{ route('components.move.store', $part) }}" autocomplete="off" class="space-y-6">
             @csrf
 
             {{-- Kembali ke halaman asal setelah berhasil (detail aset bila dibuka dari sana). --}}

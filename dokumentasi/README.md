@@ -115,6 +115,7 @@ dengan riwayat pemasangan. Lihat [14-manajemen-komponen.md](14-manajemen-kompone
 - [x] V1 Filter komponen bertingkat: Kategori → Atribut → Nilai
 - [x] V2 Dropdown Atribut hanya untuk Storage
 - [x] W1 Perbaikan bug spesifikasi RAM/Storage hilang saat input
+- [x] W2 Tombol Back tidak lagi menampilkan form basi (anti duplikat)
 
 Rincian, analisis, dan prioritasnya di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md).
 

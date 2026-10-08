@@ -38,7 +38,7 @@
         </dl>
     </x-card>
 
-    <form method="POST" action="{{ route('assets.assign.store', $asset) }}" class="space-y-6">
+    <form method="POST" action="{{ route('assets.assign.store', $asset) }}" autocomplete="off" class="space-y-6">
         @csrf
 
         <x-card :title="__('Penugasan')">

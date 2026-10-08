@@ -30,6 +30,20 @@ Route::get('/dashboard', DashboardController::class)
     ->middleware('auth')
     ->name('dashboard');
 
+/*
+|--------------------------------------------------------------------------
+| Route Form (anti bfcache)
+|--------------------------------------------------------------------------
+|
+| Tombol Back browser dapat menampilkan kembali form yang sudah terisi dari
+| memori (bfcache), sehingga menyimpan ulang menghasilkan data DUPLIKAT.
+| Middleware `prevent-back-cache` mengirim `no-store` agar form dimuat ulang
+| dari server dan kembali kosong.
+|
+| @see dokumentasi/15-feedback-dan-tindak-lanjut.md W2
+|
+*/
+
 Route::middleware('auth')->group(function () {
     // Baca: admin + viewer.
     // whereNumber mencegah /employees/create tertangkap sebagai /employees/{employee}.
@@ -50,7 +64,8 @@ Route::middleware('auth')->group(function () {
     Route::get('components/{component}', [ComponentController::class, 'show'])
         ->whereNumber('component')->name('components.show');
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->middleware('prevent-back-cache')->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
@@ -59,17 +74,21 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     // Tulis: hanya admin
     Route::resource('departments', DepartmentController::class)
         ->except(['index', 'show'])
-        ->whereNumber('department');
+        ->whereNumber('department')
+        ->middleware('prevent-back-cache');
     Route::resource('employees', EmployeeController::class)
         ->except(['index', 'show'])
-        ->whereNumber('employee');
+        ->whereNumber('employee')
+        ->middleware('prevent-back-cache');
 
     // Aset: route statis (create, trashed) didahulukan agar tidak tertangkap
     // oleh {asset}, dan whereNumber menjadi pengaman kedua.
-    Route::get('assets/create', [AssetController::class, 'create'])->name('assets.create');
+    Route::get('assets/create', [AssetController::class, 'create'])
+        ->middleware('prevent-back-cache')->name('assets.create');
     Route::post('assets', [AssetController::class, 'store'])->name('assets.store');
     Route::get('assets/trashed', [AssetController::class, 'trashed'])->name('assets.trashed');
     Route::get('assets/{asset}/edit', [AssetController::class, 'edit'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('asset')->name('assets.edit');
     Route::put('assets/{asset}', [AssetController::class, 'update'])
         ->whereNumber('asset')->name('assets.update');
@@ -82,21 +101,25 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     // Alokasi aset: assign, return, transfer
     Route::get('assets/{asset}/assign', [AssetAssignmentController::class, 'create'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('asset')->name('assets.assign.create');
     Route::post('assets/{asset}/assign', [AssetAssignmentController::class, 'store'])
         ->whereNumber('asset')->name('assets.assign.store');
     Route::post('assignments/{assignment}/return', [AssetAssignmentController::class, 'return'])
         ->whereNumber('assignment')->name('assignments.return');
     Route::get('assets/{asset}/transfer', [AssetAssignmentController::class, 'transferCreate'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('asset')->name('assets.transfer.create');
     Route::post('assets/{asset}/transfer', [AssetAssignmentController::class, 'transfer'])
         ->whereNumber('asset')->name('assets.transfer.store');
 
     // Komponen: route statis (create, trashed) didahulukan, plus whereNumber.
-    Route::get('components/create', [ComponentController::class, 'create'])->name('components.create');
+    Route::get('components/create', [ComponentController::class, 'create'])
+        ->middleware('prevent-back-cache')->name('components.create');
     Route::post('components', [ComponentController::class, 'store'])->name('components.store');
     Route::get('components/trashed', [ComponentController::class, 'trashed'])->name('components.trashed');
     Route::get('components/{component}/edit', [ComponentController::class, 'edit'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('component')->name('components.edit');
     Route::put('components/{component}', [ComponentController::class, 'update'])
         ->whereNumber('component')->name('components.update');
@@ -107,12 +130,14 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     // Pemasangan & pelepasan komponen
     Route::get('assets/{asset}/components/install', [ComponentInstallationController::class, 'create'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('asset')->name('components.install.create');
     Route::post('assets/{asset}/components/install', [ComponentInstallationController::class, 'store'])
         ->whereNumber('asset')->name('components.install.store');
     Route::post('installations/{installation}/remove', [ComponentInstallationController::class, 'remove'])
         ->whereNumber('installation')->name('components.remove');
     Route::get('components/{component}/move', [ComponentInstallationController::class, 'moveCreate'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('component')->name('components.move.create');
     Route::post('components/{component}/move', [ComponentInstallationController::class, 'move'])
         ->whereNumber('component')->name('components.move.store');
@@ -128,26 +153,31 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     // Manajemen akun user (S3) — hanya Admin IT.
     Route::resource('users', UserController::class)
         ->except(['show'])
-        ->whereNumber('user');
+        ->whereNumber('user')
+        ->middleware('prevent-back-cache');
 
     // Pemasangan dari sisi komponen (pilih host)
     Route::get('components/{component}/install', [ComponentInstallationController::class, 'attachCreate'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('component')->name('components.attach.create');
     Route::post('components/{component}/install', [ComponentInstallationController::class, 'attach'])
         ->whereNumber('component')->name('components.attach.store');
 
     // Operasi komponen massal (FB-6)
     Route::get('assets/{asset}/components/bulk-install', [BulkComponentController::class, 'installForm'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('asset')->name('components.bulk-install.create');
     Route::post('assets/{asset}/components/bulk-install', [BulkComponentController::class, 'install'])
         ->whereNumber('asset')->name('components.bulk-install.store');
 
     Route::get('assets/{asset}/components/bulk-remove', [BulkComponentController::class, 'removeForm'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('asset')->name('components.bulk-remove.create');
     Route::post('assets/{asset}/components/bulk-remove', [BulkComponentController::class, 'remove'])
         ->whereNumber('asset')->name('components.bulk-remove.store');
 
     Route::get('assets/{asset}/components/bulk-move', [BulkComponentController::class, 'moveForm'])
+        ->middleware('prevent-back-cache')
         ->whereNumber('asset')->name('components.bulk-move.create');
     Route::post('assets/{asset}/components/bulk-move', [BulkComponentController::class, 'move'])
         ->whereNumber('asset')->name('components.bulk-move.store');

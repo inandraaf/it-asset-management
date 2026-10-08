@@ -482,6 +482,54 @@ dan `capacity_mb = 16384`.
 kategori dibungkus `fieldset` dengan `x-bind:disabled`. Test ini **terbukti gagal** bila
 fieldset dilepas.
 
+### W2 — Tombol Back Menampilkan Form Basi (Risiko Duplikat)
+
+**Gejala:** setelah menyimpan aset/komponen, menekan tombol Back browser mengembalikan
+**form yang sudah terisi**, dan menekan Simpan lagi menghasilkan **data duplikat**.
+
+#### Analisis Dua Lapis
+
+Masalah ini ternyata punya **dua penyebab berbeda**, dan keduanya harus ditangani:
+
+| Lapis | Penyebab | Gejala |
+| --- | --- | --- |
+| 1 | **bfcache** — browser menyimpan snapshot halaman di memori | Halaman tidak dimuat ulang sama sekali |
+| 2 | **Form value restoration** — Chrome mengisi ulang field dari riwayat | HTML dari server kosong, tetapi field terisi |
+
+Laravel secara bawaan mengirim `Cache-Control: no-cache, private` untuk respons
+terautentikasi. Header itu **tidak mematikan bfcache** — `no-cache` hanya berarti
+"revalidasi", bukan "jangan simpan".
+
+#### Perbaikan
+
+**Lapis 1 — middleware `prevent-back-cache`:**
+
+```php
+$response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+$response->headers->set('Pragma', 'no-cache');
+$response->headers->set('Expires', '0');
+```
+
+`no-store` memaksa browser membuang salinan halaman. Diterapkan pada **17 route form**
+(create/edit aset, komponen, departemen, karyawan, user, profil, assign, transfer, move,
+bulk), termasuk halaman login.
+
+**Lapis 2 — `autocomplete="off"`:** ditambahkan pada **17 form input** agar Chrome tidak
+memulihkan nilai field dari riwayat.
+
+> Halaman **daftar/read-only tidak** diberi `no-store`, supaya navigasi tetap cepat.
+
+#### Verifikasi (Chrome DevTools Protocol)
+
+| Pemeriksaan | Sebelum | Sesudah |
+| --- | --- | --- |
+| Request ke server saat Back | 0 (dari bfcache) | **1** (`back_forward`, 82 ms) |
+| Nilai field setelah Back | terisi `XSS-Back-Probe` | **kosong** |
+| HTML dari server berisi `value=` | tidak ada | tidak ada (bersih) |
+
+Diuji pada `/assets/create` dan `/components/create`: keduanya kembali **kosong** setelah
+tombol Back ditekan.
+
 ### T6 — Struktur Sidebar
 
 ```

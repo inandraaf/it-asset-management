@@ -19,7 +19,7 @@
                 return hex.replace(/(.{2})(?=.)/g, '$1:');
             }
          }">
-        <form method="POST" action="{{ route('assets.update', $asset) }}" class="space-y-6">
+        <form method="POST" action="{{ route('assets.update', $asset) }}" autocomplete="off" class="space-y-6">
             @csrf
             @method('put')
 

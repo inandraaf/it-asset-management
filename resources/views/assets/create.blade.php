@@ -15,7 +15,7 @@
                 return hex.replace(/(.{2})(?=.)/g, '$1:');
             }
          }">
-        <form method="POST" action="{{ route('assets.store') }}" class="space-y-6">
+        <form method="POST" action="{{ route('assets.store') }}" autocomplete="off" class="space-y-6">
             @csrf
 
             <x-card :title="__('Identitas Aset')">
