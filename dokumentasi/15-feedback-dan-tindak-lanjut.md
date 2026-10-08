@@ -287,7 +287,7 @@ Satu PC kini dapat menyimpan beberapa akun. Migrasi memindahkan data lama
 | **U2** | Staf/karyawan juga perlu melihat kredensial | Kredensial terbuka untuk semua role (viewer), tanpa tombol tulis | ✅ |
 | **U3a** | CCTV/Printer masih menampilkan bagian khusus komputer | Pemegang, OS, nama komputer, komponen, kredensial, riwayat disembunyikan | ✅ |
 | **U3b** | Merek kosong jadi "Rakitan" di CCTV/Printer | Merek **wajib** untuk Laptop/CCTV/Printer; **opsional** hanya untuk PC | ✅ |
-| **U3c** | Form aset: OS tidak perlu untuk CCTV/Printer | Kartu Sistem Operasi disembunyikan untuk perangkat departemen | ✅ |
+| **U3c** | Form aset: OS tidak perlu untuk CCTV/Printer | Kartu Sistem Operasi disembunyikan untuk perangkat departemen — di form **Create maupun Edit**; MAC Printer tidak dirender, MAC CCTV jadi opsional | ✅ |
 | **U4** | Bisa satu karyawan memegang lebih dari satu aset? | **Sudah bisa** — tidak ada perubahan kode | ✅ (sudah didukung) |
 
 #### U1 — Filter Kapasitas Storage
@@ -335,6 +335,38 @@ tanpa memakai akun admin. Karena itu:
 
 Diterapkan lewat `AssetType::requiresBrand()` pada `StoreAssetRequest` dan
 `UpdateAssetRequest`.
+
+#### U3c — Sistem Operasi Hanya untuk Komputer
+
+Umpan balik: **"pada edit aset bagian CCTV dan Printer gaada sistem operasi dong"** — dan
+saat itu masih ada. Setelah diperiksa, `create.blade.php` sudah menyembunyikan kartu OS untuk
+perangkat departemen, tetapi **`edit.blade.php` tidak** — kartu OS selalu dirender, sehingga
+CCTV/Printer masih menampilkan field "Sistem Operasi".
+
+**Perbaikan:** kartu OS di `edit.blade.php` dibungkus `@if ($asset->type->isComputer())`,
+mengikuti pola yang sama seperti `create.blade.php`.
+
+Sekalian diperbaiki (defect sejenis di form yang sama):
+
+| Field | Sebelum | Sesudah |
+| --- | --- | --- |
+| Sistem Operasi | Selalu tampil | Hanya PC/Laptop |
+| MAC Address (Printer) | Tampil + **wajib** | **Tidak dirender** — Printer tidak memakai MAC |
+| MAC Address (CCTV) | Tampil + **wajib** | Tampil, **opsional** (`x-bind:required="false"`) |
+| MAC Address (PC/Laptop) | Wajib | Wajib (`x-bind:required="true"`) |
+
+Backend (`UpdateAssetRequest::normalizedSpecs()`) mengembalikan `specs` lama apa adanya untuk
+perangkat departemen, sehingga data OS yang mungkin sudah terlanjur tersimpan **tidak terhapus**
+hanya karena field-nya tidak lagi dirender.
+
+> **Catatan teknis:** `required` pada MAC di form edit memakai `x-bind:required` berisi ekspresi
+> Alpine literal (`"true"` / `"false"`), **bukan** directive `@required(...)` dan **bukan**
+> `@js(...)` di dalam nilai atribut komponen `<x-text-input>`. Keduanya tidak dikompilasi Blade
+> saat berada di nama/nilai atribut komponen, sehingga HTML-nya keluar mentah.
+
+**Regression Test:** `AssetTypeTest::test_edit_form_hides_os_for_department_devices`,
+`test_edit_form_still_shows_os_for_computers`, `test_edit_form_mac_field_matches_type`,
+`test_updating_department_device_keeps_existing_specs`.
 
 #### U4 — Satu Karyawan, Banyak Aset
 

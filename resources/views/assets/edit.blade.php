@@ -54,14 +54,26 @@
 
             <x-card :title="__('Jaringan')">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    <div>
-                        <x-input-label for="mac_address" :value="__('MAC Address')" />
-                        <x-text-input id="mac_address" name="mac_address" type="text" class="mt-1 font-mono"
-                                      :value="old('mac_address', $asset->mac_address)" required maxlength="17"
-                                      x-model="mac"
-                                      x-on:input="mac = formatMac($event.target.value)" />
-                        <x-input-error class="mt-2" :messages="$errors->get('mac_address')" />
-                    </div>
+                    {{-- Printer tidak memakai MAC; CCTV boleh dikosongkan (FB-4). --}}
+                    @if ($asset->type->allowsMac())
+                        <div>
+                            <x-input-label for="mac_address" :value="__('MAC Address')" />
+                            {{-- `x-bind:required` memakai ekspresi Alpine literal, bukan
+                                 directive, karena directive di dalam nama atribut komponen
+                                 tidak dikompilasi oleh Blade. --}}
+                            <x-text-input id="mac_address" name="mac_address" type="text" class="mt-1 font-mono"
+                                          :value="old('mac_address', $asset->mac_address)"
+                                          x-bind:required="{{ $asset->type->requiresMac() ? 'true' : 'false' }}" maxlength="17"
+                                          x-model="mac"
+                                          x-on:input="mac = formatMac($event.target.value)" />
+                            @if ($asset->type->requiresMac())
+                                <p class="mt-1 text-xs text-slate-500">{{ __('Wajib untuk jenis aset ini.') }}</p>
+                            @else
+                                <p class="mt-1 text-xs text-slate-500">{{ __('Opsional untuk jenis aset ini.') }}</p>
+                            @endif
+                            <x-input-error class="mt-2" :messages="$errors->get('mac_address')" />
+                        </div>
+                    @endif
 
                     <div>
                         <x-input-label for="ip_address" :value="__('IP Address (opsional)')" />
@@ -72,16 +84,18 @@
                 </div>
             </x-card>
 
-            <x-card :title="__('Sistem Operasi')"
-                    :description="__('Komponen fisik dikelola di bagian Komponen Terpasang pada halaman detail.')">
-                <div>
-                    <x-input-label for="specs_os" :value="__('Sistem Operasi (opsional)')" />
-                    <x-text-input id="specs_os" name="specs[os]" type="text" class="mt-1"
-                                  :value="old('specs.os', $asset->specs['os'] ?? '')" maxlength="100"
-                                  placeholder="{{ __('Contoh: Windows 11 Pro 64-bit') }}" />
-                    <x-input-error class="mt-2" :messages="$errors->get('specs.os')" />
-                </div>
-            </x-card>
+            @if ($asset->type->isComputer())
+                <x-card :title="__('Sistem Operasi')"
+                        :description="__('Komponen fisik dikelola di bagian Komponen Terpasang pada halaman detail.')">
+                    <div>
+                        <x-input-label for="specs_os" :value="__('Sistem Operasi (opsional)')" />
+                        <x-text-input id="specs_os" name="specs[os]" type="text" class="mt-1"
+                                      :value="old('specs.os', $asset->specs['os'] ?? '')" maxlength="100"
+                                      placeholder="{{ __('Contoh: Windows 11 Pro 64-bit') }}" />
+                        <x-input-error class="mt-2" :messages="$errors->get('specs.os')" />
+                    </div>
+                </x-card>
+            @endif
 
             <x-card :title="__('Status')">
                 <div>

@@ -380,4 +380,80 @@ class AssetTypeTest extends TestCase
         // Kartu OS memakai x-show yang hanya tampil untuk PC/Laptop.
         $this->assertStringContainsString("x-show=\"type === 'PC' || type === 'Laptop'\"", $html);
     }
+
+    public function test_edit_form_hides_os_for_department_devices(): void
+    {
+        $cctv = Asset::factory()->cctv()->create(['hostname' => 'cctv-edp-01']);
+        $printer = Asset::factory()->printer()->create();
+
+        foreach ([$cctv, $printer] as $asset) {
+            $this->actingAs($this->admin())
+                ->get(route('assets.edit', $asset))
+                ->assertOk()
+                ->assertDontSee('Sistem Operasi')
+                ->assertDontSee('specs[os]', false);
+        }
+    }
+
+    public function test_edit_form_still_shows_os_for_computers(): void
+    {
+        $pc = Asset::factory()->pc()->create();
+
+        $this->actingAs($this->admin())
+            ->get(route('assets.edit', $pc))
+            ->assertOk()
+            ->assertSee('Sistem Operasi')
+            ->assertSee('specs[os]', false);
+    }
+
+    /**
+     * Karena form CCTV/Printer tidak lagi merender kartu OS, update tidak boleh
+     * menghapus `specs` yang mungkin sudah terlanjur tersimpan.
+     */
+    public function test_updating_department_device_keeps_existing_specs(): void
+    {
+        $cctv = Asset::factory()->cctv()->create([
+            'hostname' => 'cctv-edp-01',
+            'specs' => ['os' => 'Linux'],
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put(route('assets.update', $cctv), [
+                'brand' => 'Hikvision',
+                'mac_address' => 'AA:BB:CC:DD:EE:09',
+                'ip_address' => '192.168.10.99',
+                'status' => 'Available',
+            ])
+            ->assertRedirect(route('assets.show', $cctv));
+
+        $this->assertSame(['os' => 'Linux'], $cctv->fresh()->specs);
+    }
+
+    public function test_edit_form_mac_field_matches_type(): void
+    {
+        $printer = Asset::factory()->printer()->create();
+        $cctv = Asset::factory()->cctv()->create(['hostname' => 'cctv-edp-01']);
+        $pc = Asset::factory()->pc()->create();
+
+        // Printer: MAC tidak dipakai sama sekali → field tidak dirender.
+        $this->actingAs($this->admin())
+            ->get(route('assets.edit', $printer))
+            ->assertOk()
+            ->assertDontSee('MAC Address');
+
+        // CCTV: MAC opsional → field ada, tapi `required` tidak aktif.
+        $cctvHtml = $this->actingAs($this->admin())
+            ->get(route('assets.edit', $cctv))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('MAC Address', $cctvHtml);
+        $this->assertStringContainsString('x-bind:required="false"', $cctvHtml);
+
+        // PC: MAC wajib → `required` aktif.
+        $pcHtml = $this->actingAs($this->admin())
+            ->get(route('assets.edit', $pc))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('x-bind:required="true"', $pcHtml);
+    }
 }

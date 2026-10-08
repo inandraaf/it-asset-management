@@ -392,7 +392,7 @@ S1–S5, U1–U4, V1–V2, dan W1–W4b selesai**.
 
 | Audit | Hasil |
 | --- | --- |
-| Test | **362 lulus** (1140 assertions), 24 berkas test |
+| Test | **366 lulus** (1159 assertions), 24 berkas test |
 | Deprecation | 2 (dari PHP 8.5: `PDO::MYSQL_ATTR_SSL_CA` di `config/database.php`) — **bukan kegagalan** |
 | Pint | **PASS (160 file)** |
 | Seeder | PC=10 · Laptop=6 · CCTV=3 · Printer=2 — total **21 aset**; idempoten (dijalankan 2× tidak menggandakan) |

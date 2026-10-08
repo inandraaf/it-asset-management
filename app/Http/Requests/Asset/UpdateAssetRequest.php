@@ -92,6 +92,14 @@ class UpdateAssetRequest extends FormRequest
      */
     private function normalizedSpecs(): array
     {
+        // CCTV/Printer tidak punya sistem operasi (U3c). Form tidak merender
+        // kartu OS untuk jenis ini, sehingga tidak ada input `specs` yang
+        // dikirim — nilai lama dipertahankan (tidak dihapus) agar data aset
+        // yang sempat punya OS tidak hilang tanpa sengaja.
+        if (! $this->route('asset')->type->isComputer()) {
+            return $this->route('asset')->specs ?? [];
+        }
+
         $input = (array) $this->input('specs', []);
         $clean = [];
 
