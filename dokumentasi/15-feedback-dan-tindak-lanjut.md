@@ -346,6 +346,142 @@ pemegang*, bukan *satu karyawan maksimal satu aset*:
 
 Diverifikasi: satu karyawan dapat memegang PC **dan** Laptop sekaligus.
 
+### V1 — Filter Komponen Bertingkat
+
+Umpan balik: kategori "Storage" muncul **tiga kali** di daftar kategori, dan opsi "per keping"
+ambigu (keping mana — SSD atau HDD?).
+
+**Perbaikan:** filter menjadi **tiga tingkat**.
+
+```
+Kategori  →  Atribut  →  Nilai
+Storage   →  Tipe     →  SSD / HDD
+Storage   →  Kapasitas Total → 512GB / 1TB / 2560GB
+RAM       →  Kapasitas Total → 8GB / 16GB
+CPU       →  Seri     →  i7-11700 / i5-10400
+```
+
+| Sebelum | Sesudah |
+| --- | --- |
+| 7 kategori (Storage 3×) | **6 kategori** (Storage 1×) |
+| "Kapasitas per Keping" (ambigu) | **Dihapus** |
+| Satu tingkat (kategori → nilai) | Tiga tingkat (kategori → atribut → nilai) |
+
+**Kenapa "per keping" dihapus:** nilainya ambigu — "512GB" bisa berarti SSD atau HDD.
+Yang tersisa hanya **Kapasitas Total**, yang jelas maknanya (SSD 512GB + HDD 1TB = 1536GB).
+
+Dropdown disusun bergantung: memilih kategori menampilkan atributnya, memilih atribut
+menampilkan nilainya. Struktur didefinisikan di `Component::FILTER_GROUPS`, dan
+`Component::filterTree()` menghasilkan pohon yang siap dipakai view.
+
+| Kategori | Atribut | Sumber nilai | Contoh |
+| --- | --- | --- | --- |
+| RAM | Kapasitas Total | `SUM(capacity_mb)` per aset | 8GB, 16GB |
+| Storage | Tipe | `specs.type` | SSD, HDD |
+| Storage | Kapasitas Total | `SUM(capacity_mb)` per aset | 512GB, 1TB, 2560GB |
+| CPU | Seri | `specs.series` | i7-11700 |
+| Motherboard | Chipset | `specs.chipset` | H510 |
+| GPU | Model | `specs.model` | RTX 3060 |
+| Monitor | Ukuran | `specs.size` | 24" |
+
+### V2 — Dropdown Atribut Hanya untuk Storage
+
+Umpan balik: filter tiga tingkat sebaiknya **khusus Storage**, karena hanya Storage yang
+atributnya beragam (Tipe **dan** Kapasitas). Kategori lain atributnya tetap, jadi dropdown
+"Atribut" tidak perlu ditampilkan.
+
+| Kategori | Jumlah atribut | Dropdown Atribut |
+| --- | --- | --- |
+| RAM | 1 (`total`) | **Disembunyikan** — langsung ke Nilai |
+| CPU | 1 (`series`) | Disembunyikan |
+| Motherboard | 1 (`chipset`) | Disembunyikan |
+| GPU | 1 (`model`) | Disembunyikan |
+| Monitor | 1 (`size`) | Disembunyikan |
+| **Storage** | **2** (`type`, `total`) | **Ditampilkan** |
+
+Implementasi:
+
+- `Component::hasMultipleAttributes($category)` — true hanya bila kategori punya >1 atribut.
+- `Component::defaultAttribute($category)` — atribut pertama, dipakai otomatis.
+- Controller: bila kategori ber-atribut tunggal, atribut diisi otomatis sehingga URL cukup
+  `?filter_category=ram&component_value=8GB`.
+- View: kolom "Atribut" memakai `x-show="multi"`; grid menyesuaikan (2 kolom bila tanpa
+  atribut, 3 kolom bila ada).
+
+#### Verifikasi Browser (Chrome DevTools Protocol)
+
+| Kategori | Dropdown Atribut | Nilai | Nilai bisa dipilih |
+| --- | --- | --- | --- |
+| RAM | `display: none` | 8GB, 16GB | ✅ |
+| CPU | `display: none` | Ryzen 5 5600, i5-10400, i7-11700 | ✅ |
+| Motherboard | `display: none` | B560, H510 | ✅ |
+| GPU | `display: none` | GTX 1650, RTX 3060 | ✅ |
+| Monitor | `display: none` | 21.5", 24", 27" | ✅ |
+| **Storage** | **`display: block`** | (menunggu atribut) | Setelah pilih atribut → 512GB, 1TB, 2560GB |
+
+> Catatan metodologi: uji awal memakai Chrome headless `--dump-dom` memberi hasil **menyesatkan**
+> (x-show tampak tidak reaktif). Setelah diverifikasi ulang lewat **DevTools Protocol**,
+> reaktivitas Alpine bekerja normal — `--dump-dom` dengan `--virtual-time-budget` tidak
+> mengeksekusi rantai `setTimeout` secara andal. Pelajarannya: untuk uji interaksi browser,
+> gunakan CDP, bukan dump-dom.
+
+### W1 — Bug: Spesifikasi RAM/Storage Hilang Saat Input
+
+**Gejala yang dilaporkan:** setelah menambah RAM kedua ke sebuah PC, ringkasan spesifikasi
+menampilkan `16GB DDR4 + Samsung` (merek, bukan kapasitas) dan filter RAM mentok di 16GB
+padahal seharusnya 32GB.
+
+#### Akar Penyebab
+
+RAM dan Storage **memakai key `specs` yang sama**: `capacity` dan `type`.
+
+Form komponen merender **semua** kategori sekaligus di DOM (hanya disembunyikan dengan
+`x-show`). Akibatnya untuk `name="specs[capacity]"` ada **dua** elemen terkirim:
+
+```
+specs[capacity] = 16GB     ← field RAM (terlihat)
+specs[capacity] = (kosong) ← field Storage (tersembunyi)
+```
+
+PHP mengambil nilai **terakhir**, yaitu milik Storage yang kosong. Akibat berantai:
+
+| Terjadi | Dampak |
+| --- | --- |
+| `specs.capacity` hilang | `capacity_mb` tidak terisi (NULL) |
+| `capacity_mb` NULL | Akumulasi RAM gagal → filter mentok di 16GB |
+| `specs.capacity` kosong | `essentialSummary()` jatuh ke fallback → tampil merek "Samsung" |
+
+#### Perbaikan
+
+Tiap kategori dibungkus `<fieldset>` yang di-**disable** saat tidak aktif:
+
+```blade
+<fieldset x-show="category === @js($categoryValue)"
+          x-bind:disabled="category !== @js($categoryValue)">
+```
+
+Kontrol form di dalam `<fieldset disabled>` **tidak ikut ter-submit** oleh browser, sehingga
+hanya field kategori terpilih yang terkirim.
+
+#### Verifikasi
+
+Reproduksi skenario persis seperti laporan:
+
+| Tahap | Ringkasan | Opsi filter RAM |
+| --- | --- | --- |
+| Setelah RAM 1 (16GB DDR4) | `16GB DDR4` | 8GB, 16GB |
+| Setelah RAM 2 (16GB DDR4, merek lain) | **`16GB DDR4 x2`** | 8GB, 16GB, **32GB** |
+
+Verifikasi browser (CDP): fieldset kategori aktif `disabled: false`, 10 kategori lain
+`disabled: true`. Submit dari browser menghasilkan `specs = {"type": "DDR4", "capacity": "16GB"}`
+dan `capacity_mb = 16384`.
+
+#### Regression Test
+
+`ComponentTest::test_create_form_disables_inactive_category_fields` — memastikan setiap
+kategori dibungkus `fieldset` dengan `x-bind:disabled`. Test ini **terbukti gagal** bila
+fieldset dilepas.
+
 ### T6 — Struktur Sidebar
 
 ```

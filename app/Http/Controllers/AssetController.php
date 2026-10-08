@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssetStatus;
 use App\Enums\AssetType;
-use App\Enums\ComponentCategory;
 use App\Http\Requests\Asset\StoreAssetRequest;
 use App\Http\Requests\Asset\UpdateAssetRequest;
 use App\Models\Asset;
@@ -67,7 +66,7 @@ class AssetController extends Controller
             })
             // Filter komponen terpasang: satu kategori, satu nilai (R2).
             ->when($filter, fn ($query) => $query
-                ->where(fn ($w) => $this->applyComponentFilter($w, $filter[0], $filter[1])))
+                ->where(fn ($w) => $this->applyComponentFilter($w, $filter[0], $filter[1], $filter[2])))
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
@@ -79,8 +78,8 @@ class AssetController extends Controller
             'departments' => $departments,
             'statuses' => AssetStatus::options(),
             'types' => AssetType::options(),
-            // Opsi filter per kategori, dari data aktual (R2/R3).
-            'componentFilters' => Component::filterOptions(),
+            // Filter bertingkat: Kategori → Atribut → Nilai (V1).
+            'componentFilterTree' => Component::filterTree(),
         ]);
     }
 
@@ -91,17 +90,32 @@ class AssetController extends Controller
      *
      * @see dokumentasi/15-feedback-dan-tindak-lanjut.md R2
      */
+    /**
+     * Baca filter komponen dari request (tiga tingkat).
+     *
+     * @return array{0: string, 1: string, 2: string} [kategori, atribut, nilai]
+     */
     private function componentFilter(Request $request): array
     {
-        $key = $request->string('filter_key')->toString();
+        $category = $request->string('filter_category')->toString();
         $value = $request->string('component_value')->toString();
 
-        if ($key === '' || $value === '') {
+        if ($category === '' || $value === '') {
             return [];
         }
 
-        // Kunci di luar daftar resmi divalidasi di applyComponentFilter.
-        return [$key, $value];
+        // Hanya kategori dengan >1 atribut (Storage) yang meminta pilihan atribut.
+        // Kategori lain atributnya tetap, jadi diisi otomatis (V2).
+        $attribute = Component::hasMultipleAttributes($category)
+            ? $request->string('filter_attribute')->toString()
+            : Component::defaultAttribute($category);
+
+        if ($attribute === null || $attribute === '') {
+            return [];
+        }
+
+        // Validitas kategori/atribut diperiksa di applyComponentFilter.
+        return [$category, $attribute, $value];
     }
 
     /**
@@ -117,9 +131,9 @@ class AssetController extends Controller
      *
      * @param  \Illuminate\Database\Eloquent\Builder<Asset>  $query
      */
-    private function applyComponentFilter($query, string $key, string $value): void
+    private function applyComponentFilter($query, string $category, string $attribute, string $value): void
     {
-        $def = Component::FILTERS[$key] ?? null;
+        $def = Component::FILTER_GROUPS[$category]['attributes'][$attribute] ?? null;
 
         if ($def === null) {
             $query->whereRaw('1 = 0');
@@ -127,11 +141,8 @@ class AssetController extends Controller
             return;
         }
 
-        $category = $def['category'];
-        $attribute = $def['attribute'];
-
-        // Kapasitas: RAM memakai akumulasi total, kategori lain per keping.
-        if ($attribute === null) {
+        // Sumber 'total': jumlahkan capacity_mb seluruh komponen kategori ini.
+        if ($def['source'] === 'total') {
             $targetMb = Component::parseCapacityMb($value);
 
             if ($targetMb === null) {
@@ -140,26 +151,17 @@ class AssetController extends Controller
                 return;
             }
 
-            // RAM selalu agregat; storage bisa dipilih mode agregat.
-            $aggregate = $category === ComponentCategory::Ram->value
-                || ($def['aggregate'] ?? false);
-
-            $query->whereIn('assets.id', function ($sub) use ($category, $targetMb, $aggregate) {
+            $query->whereIn('assets.id', function ($sub) use ($category, $targetMb) {
                 $sub->from('component_installations as i')
                     ->join('components as c', 'c.id', '=', 'i.component_id')
                     ->whereNull('i.removed_date')
                     ->whereNull('c.deleted_at')
                     ->where('c.category', $category);
 
-                if ($aggregate) {
-                    // Total per aset, mis. 2x8GB = 16GB.
-                    $sub->groupBy('i.asset_id')
-                        ->havingRaw('SUM(c.capacity_mb) = ?', [$targetMb])
-                        ->select('i.asset_id');
-                } else {
-                    // Per keping.
-                    $sub->where('c.capacity_mb', $targetMb)->select('i.asset_id');
-                }
+                // Total per aset, mis. RAM 2x8GB = 16GB atau SSD 512GB + HDD 1TB.
+                $sub->groupBy('i.asset_id')
+                    ->havingRaw('SUM(c.capacity_mb) = ?', [$targetMb])
+                    ->select('i.asset_id');
             });
 
             return;

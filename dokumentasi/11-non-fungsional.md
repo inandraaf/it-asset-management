@@ -72,6 +72,7 @@ Antarmuka memakai **layout sidebar admin** yang rapi dan sederhana:
 | Parent canvas tanpa `position: relative` | Chart.js responsive berukuran 0 (tampak kosong) | Beri `relative` pada wrapper canvas |
 | `backdrop-blur` pada header `sticky` | Berisiko mengganggu interaksi di sebagian browser | Hindari, atau naikkan z-index dengan benar |
 | Dua elemen Alpine yang saling bergantung diberi `x-data` masing-masing | State tidak terbagi; penyaringan tidak pernah terjadi | Bungkus elemen terkait dalam **satu** wrapper `x-data` |
+| Dua kategori merender input dengan `name` yang sama, hanya disembunyikan `x-show` | Browser mengirim dua nilai; PHP mengambil yang terakhir (kategori tersembunyi) → data hilang | Bungkus tiap kategori dengan `<fieldset x-bind:disabled>`, atau beri `name` berbeda per kategori |
 
 > Setiap jebakan di atas punya **regression test** di `tests/Feature/UiRegressionTest.php`
 > (kecuali z-index/backdrop-blur yang diperiksa secara visual).

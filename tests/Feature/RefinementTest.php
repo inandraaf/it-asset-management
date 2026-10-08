@@ -163,25 +163,41 @@ class RefinementTest extends TestCase
 
     // ------------------------------------------- T7/R2 Filter per kategori
 
-    public function test_filter_options_are_grouped_by_filter_key(): void
+    public function test_filter_tree_groups_category_then_attribute(): void
     {
-        Component::factory()->ofCategory(ComponentCategory::Ram)->create(['specs' => ['capacity' => '16GB', 'type' => 'DDR4']]);
-        Component::factory()->ofCategory(ComponentCategory::Storage)->create(['specs' => ['capacity' => '512GB', 'type' => 'SSD']]);
-        Component::factory()->ofCategory(ComponentCategory::Cpu)->create(['specs' => ['series' => 'i7-11700']]);
+        $asset = Asset::factory()->create();
+        $ram = Component::factory()->ofCategory(ComponentCategory::Ram)->create(['specs' => ['capacity' => '16GB', 'type' => 'DDR4']]);
+        $disk = Component::factory()->ofCategory(ComponentCategory::Storage)->create(['specs' => ['capacity' => '512GB', 'type' => 'SSD']]);
+        $cpu = Component::factory()->ofCategory(ComponentCategory::Cpu)->create(['specs' => ['series' => 'i7-11700']]);
 
-        $options = Component::filterOptions();
+        foreach ([$ram, $disk, $cpu] as $c) {
+            \App\Models\ComponentInstallation::factory()->create([
+                'component_id' => $c->id, 'asset_id' => $asset->id, 'removed_date' => null,
+            ]);
+        }
 
-        // Storage muncul DUA kali: tipe dan kapasitas (S2).
-        $this->assertArrayHasKey('storage_type', $options);
-        $this->assertSame(['SSD'], $options['storage_type']['values']);
-        $this->assertArrayHasKey('storage_capacity', $options);
-        $this->assertSame(['512GB'], $options['storage_capacity']['values']);
+        $tree = Component::filterTree();
 
-        $this->assertArrayHasKey('cpu', $options);
-        $this->assertSame(['i7-11700'], $options['cpu']['values']);
+        // Storage hanya muncul SEKALI sebagai kategori (V1).
+        $this->assertSame(
+            ['ram', 'storage', 'cpu'],
+            array_values(array_intersect(array_keys($tree), ['ram', 'storage', 'cpu']))
+        );
 
-        // RAM memakai akumulasi total per aset; kosong bila belum terpasang.
-        $this->assertArrayNotHasKey('ram', $options);
+        // Storage punya dua atribut: Tipe & Kapasitas Total.
+        $this->assertArrayHasKey('type', $tree['storage']['attributes']);
+        $this->assertArrayHasKey('total', $tree['storage']['attributes']);
+        $this->assertSame(['SSD'], $tree['storage']['attributes']['type']['values']);
+        $this->assertSame(['512GB'], $tree['storage']['attributes']['total']['values']);
+
+        // RAM memakai atribut 'total'.
+        $this->assertArrayHasKey('total', $tree['ram']['attributes']);
+    }
+
+    public function test_filter_tree_has_no_per_module_storage_option(): void
+    {
+        // 'per keping' dihapus karena ambigu (SSD atau HDD?).
+        $this->assertArrayNotHasKey('module', Component::FILTER_GROUPS['storage']['attributes']);
     }
 
     /**
@@ -199,28 +215,15 @@ class RefinementTest extends TestCase
         $this->install($only, ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD']);
 
         // Opsi total storage berisi 512GB (per aset) dan 1536GB (gabungan).
-        $this->assertContains('1536GB', Component::storageTotalOptions());
-        $this->assertContains('512GB', Component::storageTotalOptions());
+        $this->assertContains('1536GB', Component::totalCapacityOptions('storage'));
+        $this->assertContains('512GB', Component::totalCapacityOptions('storage'));
 
         // Filter total 1536GB hanya menemukan aset gabungan.
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'storage_capacity_total', 'component_value' => '1536GB']))
+            ->get(route('assets.index', ['filter_category' => 'storage', 'filter_attribute' => 'total', 'component_value' => '1536GB']))
             ->assertOk()
             ->assertSee('PC-MIXED')
             ->assertDontSee('PC-ONLY512');
-    }
-
-    public function test_storage_per_module_filter_still_available(): void
-    {
-        $mixed = Asset::factory()->create(['asset_code' => 'PC-MIXED']);
-        $this->install($mixed, ComponentCategory::Storage, ['capacity' => '512GB', 'type' => 'SSD']);
-        $this->install($mixed, ComponentCategory::Storage, ['capacity' => '1TB', 'type' => 'HDD']);
-
-        // Filter per keping: 512GB tetap menemukan aset yang punya SSD 512GB.
-        $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'storage_capacity', 'component_value' => '512GB']))
-            ->assertOk()
-            ->assertSee('PC-MIXED');
     }
 
     public function test_storage_capacity_filter_matches_per_module(): void
@@ -233,7 +236,7 @@ class RefinementTest extends TestCase
 
         // Filter kapasitas storage (per keping).
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'storage_capacity', 'component_value' => '512GB']))
+            ->get(route('assets.index', ['filter_category' => 'storage', 'filter_attribute' => 'total', 'component_value' => '512GB']))
             ->assertOk()
             ->assertSee('PC-SSD512')
             ->assertDontSee('PC-HDD1TB');
@@ -250,11 +253,11 @@ class RefinementTest extends TestCase
         $this->install($asetB, ComponentCategory::Ram, ['capacity' => '8GB', 'type' => 'DDR4']);
 
         // Opsi RAM menampilkan total: 8GB dan 16GB.
-        $this->assertSame(['8GB', '16GB'], Component::ramTotalOptions());
+        $this->assertSame(['8GB', '16GB'], Component::totalCapacityOptions('ram'));
 
         // Filter 16GB hanya menemukan aset dengan total 16GB (2x8GB).
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'ram', 'component_value' => '16GB']))
+            ->get(route('assets.index', ['filter_category' => 'ram', 'filter_attribute' => 'total', 'component_value' => '16GB']))
             ->assertOk()
             ->assertSee('PC-16TOTAL')
             ->assertDontSee('PC-8ONLY');
@@ -271,7 +274,7 @@ class RefinementTest extends TestCase
         $this->install($double, ComponentCategory::Ram, ['capacity' => '8GB', 'type' => 'DDR4']);
 
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'ram', 'component_value' => '16GB']))
+            ->get(route('assets.index', ['filter_category' => 'ram', 'filter_attribute' => 'total', 'component_value' => '16GB']))
             ->assertOk()
             ->assertSee('PC-1X16')
             ->assertSee('PC-2X8');
@@ -290,7 +293,7 @@ class RefinementTest extends TestCase
 
         // Filter SSD: menemukan aset ber-SSD, termasuk yang punya SSD + HDD.
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'storage_type', 'component_value' => 'SSD']))
+            ->get(route('assets.index', ['filter_category' => 'storage', 'filter_attribute' => 'type', 'component_value' => 'SSD']))
             ->assertOk()
             ->assertSee('PC-SSD')
             ->assertSee('PC-BOTH')
@@ -306,7 +309,7 @@ class RefinementTest extends TestCase
         $this->install($i5, ComponentCategory::Cpu, ['series' => 'i5-10400']);
 
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'cpu', 'component_value' => 'i7-11700']))
+            ->get(route('assets.index', ['filter_category' => 'cpu', 'filter_attribute' => 'series', 'component_value' => 'i7-11700']))
             ->assertOk()
             ->assertSee('PC-I7')
             ->assertDontSee('PC-I5');
@@ -321,7 +324,7 @@ class RefinementTest extends TestCase
         $this->install($b560, ComponentCategory::Motherboard, ['chipset' => 'B560']);
 
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'motherboard', 'component_value' => 'H510']))
+            ->get(route('assets.index', ['filter_category' => 'motherboard', 'filter_attribute' => 'chipset', 'component_value' => 'H510']))
             ->assertOk()
             ->assertSee('PC-H510')
             ->assertDontSee('PC-B560');
@@ -342,7 +345,7 @@ class RefinementTest extends TestCase
 
         // Filter SSD harus HANYA menemukan aset A, bukan B.
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'storage_type', 'component_value' => 'SSD']))
+            ->get(route('assets.index', ['filter_category' => 'storage', 'filter_attribute' => 'type', 'component_value' => 'SSD']))
             ->assertOk()
             ->assertSee('PC-A-SSD')
             ->assertDontSee('PC-B-HDD');
@@ -354,7 +357,7 @@ class RefinementTest extends TestCase
         Component::factory()->ofCategory(ComponentCategory::Ram)->create(['specs' => ['capacity' => '8GB', 'type' => 'DDR4']]);
 
         $this->actingAs($this->admin())
-            ->get(route('assets.index', ['filter_key' => 'ram', 'component_value' => '999GB']))
+            ->get(route('assets.index', ['filter_category' => 'ram', 'filter_attribute' => 'total', 'component_value' => '999GB']))
             ->assertOk()
             ->assertDontSee('PC-ANY');
     }

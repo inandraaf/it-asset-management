@@ -184,50 +184,134 @@ class Component extends Model
     }
 
     /**
-     * Definisi filter di daftar aset.
+     * Kategori yang tersedia sebagai filter, beserta atribut yang bisa dipilih.
      *
-     * Tiap filter punya kunci sendiri, sehingga **Storage bisa muncul dua kali**
-     * (tipe dan kapasitas) dan keduanya bisa dikombinasikan.
+     * Struktur dua tingkat: **Kategori → Atribut → Nilai**. Kategori "storage"
+     * tidak lagi muncul tiga kali; admin memilih kategori Storage, lalu memilih
+     * atribut (Tipe / Kapasitas Total), baru nilainya (sub-umum).
      *
-     * `attribute` = key di dalam `specs`; `null` berarti memakai `capacity_mb`.
+     * `attribute` = kunci atribut; `source` menentukan cara mengambil nilai:
+     * - `specs`  : dari key `specs` (mis. tipe storage)
+     * - `total`  : jumlah `capacity_mb` seluruh komponen kategori tersebut
+     * - `module` : `capacity_mb` per keping
      *
-     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md S2
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md V1
      */
-    public const FILTERS = [
-        'ram' => ['category' => 'ram', 'attribute' => null, 'label' => 'RAM (Total)'],
-        'storage_type' => ['category' => 'storage', 'attribute' => 'type', 'label' => 'Storage — Tipe'],
-        'storage_capacity' => ['category' => 'storage', 'attribute' => null, 'label' => 'Storage — Kapasitas per Keping'],
-        'storage_capacity_total' => ['category' => 'storage', 'attribute' => null, 'label' => 'Storage — Kapasitas Total', 'aggregate' => true],
-        'cpu' => ['category' => 'cpu', 'attribute' => 'series', 'label' => 'CPU'],
-        'motherboard' => ['category' => 'motherboard', 'attribute' => 'chipset', 'label' => 'Motherboard'],
-        'gpu' => ['category' => 'gpu', 'attribute' => 'model', 'label' => 'GPU'],
+    public const FILTER_GROUPS = [
+        'ram' => [
+            'label' => 'RAM',
+            'attributes' => [
+                'total' => ['label' => 'Kapasitas Total', 'source' => 'total'],
+            ],
+        ],
+        'storage' => [
+            'label' => 'Storage',
+            'attributes' => [
+                'type' => ['label' => 'Tipe', 'source' => 'specs', 'key' => 'type'],
+                'total' => ['label' => 'Kapasitas Total', 'source' => 'total'],
+            ],
+        ],
+        'cpu' => [
+            'label' => 'CPU',
+            'attributes' => [
+                'series' => ['label' => 'Seri', 'source' => 'specs', 'key' => 'series'],
+            ],
+        ],
+        'motherboard' => [
+            'label' => 'Motherboard',
+            'attributes' => [
+                'chipset' => ['label' => 'Chipset', 'source' => 'specs', 'key' => 'chipset'],
+            ],
+        ],
+        'gpu' => [
+            'label' => 'GPU',
+            'attributes' => [
+                'model' => ['label' => 'Model', 'source' => 'specs', 'key' => 'model'],
+            ],
+        ],
+        'monitor' => [
+            'label' => 'Monitor',
+            'attributes' => [
+                'size' => ['label' => 'Ukuran', 'source' => 'specs', 'key' => 'size'],
+            ],
+        ],
     ];
 
     /**
-     * Daftar opsi filter, diambil dari data aktual.
+     * Apakah kategori ini punya lebih dari satu atribut, sehingga dropdown
+     * "Atribut" perlu ditampilkan.
      *
-     * @return array<string, array{label: string, category: string, attribute: ?string, values: array<int, string>}>
+     * Hanya Storage yang demikian (Tipe **dan** Kapasitas). Kategori lain
+     * atributnya tetap, jadi dropdown Atribut disembunyikan.
+     *
+     * @see dokumentasi/15-feedback-dan-tindak-lanjut.md V2
      */
-    public static function filterOptions(): array
+    public static function hasMultipleAttributes(string $category): bool
     {
-        $options = [];
+        return count(self::FILTER_GROUPS[$category]['attributes'] ?? []) > 1;
+    }
 
-        foreach (self::FILTERS as $key => $def) {
-            $values = $def['attribute'] === null
-                ? static::capacityFilterValues($def['category'], $def['aggregate'] ?? false)
-                : static::attributeFilterValues($def['category'], $def['attribute']);
+    /**
+     * Atribut default sebuah kategori (yang pertama didefinisikan).
+     */
+    public static function defaultAttribute(string $category): ?string
+    {
+        $attributes = self::FILTER_GROUPS[$category]['attributes'] ?? [];
 
-            if ($values !== []) {
-                $options[$key] = [
-                    'label' => $def['label'],
-                    'category' => $def['category'],
-                    'attribute' => $def['attribute'],
-                    'values' => $values,
+        return $attributes === [] ? null : array_key_first($attributes);
+    }
+
+    /**
+     * Daftar filter untuk dropdown bertingkat.
+     *
+     * Bentuk: `[kategori => ['label' => ..., 'attributes' => [atribut => ['label'=>..., 'values'=>[...]]]]]`
+     * Atribut tanpa nilai (mis. belum ada data) dihilangkan.
+     *
+     * @return array<string, array{label: string, attributes: array<string, array{label: string, values: array<int, string>}>}>
+     */
+    public static function filterTree(): array
+    {
+        $tree = [];
+
+        foreach (self::FILTER_GROUPS as $category => $group) {
+            $attributes = [];
+
+            foreach ($group['attributes'] as $key => $def) {
+                $values = static::filterValues($category, $def);
+
+                if ($values !== []) {
+                    $attributes[$key] = [
+                        'label' => $def['label'],
+                        'values' => $values,
+                    ];
+                }
+            }
+
+            if ($attributes !== []) {
+                $tree[$category] = [
+                    'label' => $group['label'],
+                    'attributes' => $attributes,
                 ];
             }
         }
 
-        return $options;
+        return $tree;
+    }
+
+    /**
+     * Nilai untuk satu definisi filter.
+     *
+     * @param  array{source: string, key?: string}  $def
+     * @return array<int, string>
+     */
+    private static function filterValues(string $category, array $def): array
+    {
+        return match ($def['source']) {
+            'specs' => static::attributeFilterValues($category, $def['key']),
+            'total' => static::totalCapacityOptions($category),
+            'module' => static::moduleCapacityOptions($category),
+            default => [],
+        };
     }
 
     /**
@@ -249,83 +333,51 @@ class Component extends Model
     }
 
     /**
-     * Nilai filter berbasis kapasitas (`capacity_mb`).
+     * Total kapasitas unik per aset untuk sebuah kategori.
      *
-     * - **RAM**: memakai akumulasi total per aset (1x16GB = 2x8GB).
-     * - **Storage**: per keping (SSD 512GB + HDD 1TB → muncul "512GB" dan "1TB").
+     * RAM: 2x8GB → 16GB. Storage: SSD 512GB + HDD 1TB → 1536GB.
      *
      * @return array<int, string>
      */
-    private static function capacityFilterValues(string $category, bool $aggregate = false): array
+    public static function totalCapacityOptions(string $category): array
     {
-        // RAM selalu memakai akumulasi total (1x16GB = 2x8GB).
-        if ($category === ComponentCategory::Ram->value) {
-            return static::ramTotalOptions();
-        }
+        $rows = DB::table('component_installations as i')
+            ->join('components as c', 'c.id', '=', 'i.component_id')
+            ->whereNull('i.removed_date')
+            ->whereNull('c.deleted_at')
+            ->where('c.category', $category)
+            ->whereNotNull('c.capacity_mb')
+            ->groupBy('i.asset_id')
+            ->selectRaw('SUM(c.capacity_mb) AS total_mb')
+            ->pluck('total_mb');
 
-        // Storage mode agregat: total per aset (SSD 512GB + HDD 1TB = 1.5TB).
-        if ($aggregate) {
-            return static::storageTotalOptions();
-        }
+        return static::formatCapacityList($rows);
+    }
 
+    /**
+     * Kapasitas per keping untuk sebuah kategori (tanpa penjumlahan).
+     *
+     * @return array<int, string>
+     */
+    public static function moduleCapacityOptions(string $category): array
+    {
         $rows = static::query()
             ->where('category', $category)
             ->whereNotNull('capacity_mb')
             ->selectRaw('DISTINCT capacity_mb AS value')
             ->pluck('value');
 
-        return $rows
-            ->map(fn ($mb) => self::formatCapacityMb((int) $mb))
-            ->filter()
-            ->unique()
-            ->sortBy(fn (string $label) => (int) self::parseCapacityMb($label))
-            ->values()
-            ->all();
+        return static::formatCapacityList($rows);
     }
 
     /**
-     * Total RAM unik yang benar-benar terpasang pada aset aktif.
+     * Ubah daftar MB menjadi label unik terurut.
      *
+     * @param  \Illuminate\Support\Collection<int, mixed>  $rows
      * @return array<int, string>
      */
-    public static function ramTotalOptions(): array
+    private static function formatCapacityList($rows): array
     {
-        $rows = DB::table('component_installations as i')
-            ->join('components as c', 'c.id', '=', 'i.component_id')
-            ->whereNull('i.removed_date')
-            ->whereNull('c.deleted_at')
-            ->where('c.category', ComponentCategory::Ram->value)
-            ->whereNotNull('c.capacity_mb')
-            ->groupBy('i.asset_id')
-            ->selectRaw('SUM(c.capacity_mb) AS total_mb')
-            ->pluck('total_mb');
-
-        return $rows
-            ->map(fn ($mb) => self::formatCapacityMb((int) $mb))
-            ->filter()
-            ->unique()
-            ->sortBy(fn (string $label) => (int) self::parseCapacityMb($label))
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Total storage unik per aset (SSD + HDD dijumlahkan).
-     *
-     * @return array<int, string>
-     */
-    public static function storageTotalOptions(): array
-    {
-        $rows = DB::table('component_installations as i')
-            ->join('components as c', 'c.id', '=', 'i.component_id')
-            ->whereNull('i.removed_date')
-            ->whereNull('c.deleted_at')
-            ->where('c.category', ComponentCategory::Storage->value)
-            ->whereNotNull('c.capacity_mb')
-            ->groupBy('i.asset_id')
-            ->selectRaw('SUM(c.capacity_mb) AS total_mb')
-            ->pluck('total_mb');
-
         return $rows
             ->map(fn ($mb) => self::formatCapacityMb((int) $mb))
             ->filter()

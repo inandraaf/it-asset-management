@@ -64,8 +64,16 @@
 
             <x-card :title="__('Spesifikasi')"
                     :description="__('Cukup isi yang penting; field lanjutan opsional.')">
+                {{-- Tiap kategori dibungkus <fieldset> yang di-DISABLE saat tidak aktif.
+                     Beberapa kategori memakai key `specs` yang sama (RAM & Storage
+                     sama-sama punya `capacity`/`type`). Tanpa disable, browser mengirim
+                     DUA nilai untuk `specs[capacity]` dan PHP mengambil yang terakhir
+                     (milik kategori yang sedang disembunyikan), sehingga spesifikasi
+                     kategori aktif hilang. --}}
                 @foreach ($specMap as $categoryValue => $meta)
-                    <div x-show="category === @js($categoryValue)" x-cloak>
+                    <fieldset x-show="category === @js($categoryValue)" x-cloak
+                              x-bind:disabled="category !== @js($categoryValue)"
+                              class="m-0 min-w-0 border-0 p-0">
                         @if (empty($meta['keys']) && empty($meta['advanced']))
                             <p class="text-sm text-slate-500">{{ __('Tidak ada field spesifikasi khusus untuk kategori ini.') }}</p>
                         @else
@@ -97,7 +105,7 @@
                                 </details>
                             @endif
                         @endif
-                    </div>
+                    </fieldset>
                 @endforeach
             </x-card>
 

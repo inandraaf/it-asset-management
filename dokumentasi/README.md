@@ -110,6 +110,12 @@ dengan riwayat pemasangan. Lihat [14-manajemen-komponen.md](14-manajemen-kompone
 - [x] U3 CCTV/Printer: bagian komputer disembunyikan; merek wajib; OS disembunyikan di form
 - [x] U4 Konfirmasi: satu karyawan dapat memegang banyak aset (sudah didukung)
 
+**Fase 3 lanjutan (V1) — SELESAI**
+
+- [x] V1 Filter komponen bertingkat: Kategori → Atribut → Nilai
+- [x] V2 Dropdown Atribut hanya untuk Storage
+- [x] W1 Perbaikan bug spesifikasi RAM/Storage hilang saat input
+
 Rincian, analisis, dan prioritasnya di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md).
 
 ## Keputusan Desain yang Sudah Disetujui

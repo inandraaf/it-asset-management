@@ -89,7 +89,8 @@ class UiRegressionTest extends TestCase
 
         // Nilai filter benar-benar ada sebagai <option>.
         $this->assertStringContainsString('value="16GB"', $html);
-        $this->assertStringContainsString('id="filter_key"', $html);
+        $this->assertStringContainsString('id="filter_category"', $html);
+        $this->assertStringContainsString('id="filter_attribute"', $html);
         $this->assertStringContainsString('id="component_value"', $html);
     }
 
@@ -116,7 +117,7 @@ class UiRegressionTest extends TestCase
             ->getContent();
 
         // Ambil rentang antara select kategori dan select nilai.
-        $catPos = strpos($html, 'id="filter_key"');
+        $catPos = strpos($html, 'id="filter_category"');
         $valPos = strpos($html, 'id="component_value"');
         $this->assertNotFalse($catPos);
         $this->assertNotFalse($valPos);
@@ -127,7 +128,7 @@ class UiRegressionTest extends TestCase
         $this->assertSame(
             0,
             substr_count($between, 'x-data'),
-            'Select Nilai berada di luar scope x-data kategori.'
+            'Select Nilai berada di luar scope x-data kategori/atribut.'
         );
 
         // Harus ada x-data SEBELUM select kategori (wrapper bersama).

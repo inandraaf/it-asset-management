@@ -417,4 +417,71 @@ class ComponentTest extends TestCase
             ->assertSee('PC-NEW-02')
             ->assertSee('Lokasi Saat Ini');
     }
+
+    // ------------------------------ Regresi: duplikat nama input (W1)
+
+    /**
+     * RAM & Storage sama-sama memakai key `specs[capacity]` dan `specs[type]`.
+     * Karena semua kategori dirender di DOM (disembunyikan dengan x-show),
+     * browser akan mengirim DUA nilai untuk nama yang sama dan PHP mengambil
+     * yang TERAKHIR — yaitu milik kategori tersembunyi — sehingga spesifikasi
+     * kategori aktif hilang.
+     *
+     * Perbaikannya: tiap kategori dibungkus <fieldset> yang di-DISABLE saat
+     * tidak aktif (kontrol disabled tidak ikut ter-submit).
+     */
+    public function test_create_form_disables_inactive_category_fields(): void
+    {
+        $html = $this->actingAs($this->admin())
+            ->get(route('components.create'))
+            ->assertOk()
+            ->getContent();
+
+        // Ada fieldset dengan binding disabled per kategori.
+        $this->assertStringContainsString('x-bind:disabled="category !== ', $html);
+
+        // Setiap kategori punya fieldset-nya sendiri.
+        $this->assertGreaterThanOrEqual(
+            count(ComponentCategory::cases()),
+            substr_count($html, '<fieldset'),
+            'Setiap kategori harus dibungkus fieldset agar tidak saling menimpa.'
+        );
+    }
+
+    public function test_ram_and_storage_share_spec_keys(): void
+    {
+        // Fakta yang menyebabkan bug: key `capacity`/`type` dipakai dua kategori.
+        $this->assertContains('capacity', ComponentCategory::Ram->specKeys());
+        $this->assertContains('capacity', ComponentCategory::Storage->specKeys());
+        $this->assertContains('type', ComponentCategory::Ram->specKeys());
+        $this->assertContains('type', ComponentCategory::Storage->specKeys());
+    }
+
+    /**
+     * Ringkasan menggabungkan komponen ber-spesifikasi SAMA walau mereknya beda.
+     */
+    public function test_summary_merges_same_specs_across_brands(): void
+    {
+        $asset = Asset::factory()->create();
+
+        foreach (['Kingston', 'Samsung'] as $brand) {
+            $ram = Component::factory()->ofCategory(ComponentCategory::Ram)->create([
+                'brand' => $brand,
+                'specs' => ['capacity' => '16GB', 'type' => 'DDR4'],
+            ]);
+
+            \App\Models\ComponentInstallation::factory()->create([
+                'component_id' => $ram->id,
+                'asset_id' => $asset->id,
+                'removed_date' => null,
+            ]);
+        }
+
+        $asset->load('activeComponentInstallations.component');
+
+        // Bukan "16GB DDR4 + Samsung" — nilainya digabung.
+        $this->assertSame('16GB DDR4 x2', $asset->hardwareSummary());
+        $this->assertStringNotContainsString('Samsung', $asset->hardwareSummary());
+        $this->assertStringContainsString('RAM: 16GB DDR4 x2', $asset->hardwareSummaryDetailed());
+    }
 }

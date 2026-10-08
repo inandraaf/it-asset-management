@@ -20,8 +20,8 @@
                                 </svg>
                             </span>
                             <x-text-input id="q" name="q" type="search" class="pl-9"
-                            :value="request('q')"
-                            placeholder="{{ __('Kode, MAC, IP, merek, atau nama user...') }}" />
+                                :value="request('q')"
+                                placeholder="{{ __('Kode, MAC, IP, merek, atau nama user...') }}" />
                         </div>
                     </div>
 
@@ -46,7 +46,8 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {{-- Baris 2 = 5 kolom di lg: Departemen (1) + filter bertingkat (3) + tombol (1) --}}
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5" style="padding-bottom: 1rem;">
                     <div>
                         <x-input-label for="department_id" :value="__('Departemen Pemegang')" />
                         <select id="department_id" name="department_id" class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
@@ -59,49 +60,93 @@
                         </select>
                     </div>
 
-                    {{-- Kategori & Nilai WAJIB dalam satu wrapper x-data.
-                         Bila x-data dipasang pada masing-masing <div>, state tidak
-                         terbagi dan pilihan Nilai tidak pernah tersaring. --}}
+                    {{-- Filter bertingkat: Kategori → Atribut → Nilai.
+                         Dropdown "Atribut" HANYA tampil untuk kategori yang punya
+                         lebih dari satu atribut (Storage). Kategori lain atributnya
+                         tetap, jadi langsung ke Nilai. --}}
                     <div x-data="{
-                            key: @js(request('filter_key', '')),
-                            selected: @js(request('component_value', ''))
+                            category: @js(request('filter_category', '')),
+                            attribute: @js(request('filter_attribute', '')),
+                            selected: @js(request('component_value', '')),
+                            tree: @js($componentFilterTree),
+                            get group() {
+                                return this.category && this.tree[this.category]
+                                    ? this.tree[this.category]
+                                    : null;
+                            },
+                            get multi() {
+                                return this.group ? Object.keys(this.group.attributes).length > 1 : false;
+                            },
+                            get attributes() {
+                                return this.group ? this.group.attributes : {};
+                            },
+                            get activeAttribute() {
+                                return this.multi ? this.attribute : (Object.keys(this.attributes)[0] ?? '');
+                            },
+                            syncAttribute() {
+                                this.attribute = this.multi ? '' : (Object.keys(this.attributes)[0] ?? '');
+                                this.selected = '';
+                            }
                          }"
-                         class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-2">
+                         x-init="if (! multi) { attribute = Object.keys(attributes)[0] ?? ''; }"
+                         class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-3"
+                         x-bind:class="multi ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
                         <div>
-                            <x-input-label for="filter_key" :value="__('Kategori Komponen')" />
-                            <select id="filter_key" name="filter_key" x-model="key"
-                                    x-on:change="selected = ''"
+                            <x-input-label for="filter_category" :value="__('Kategori Komponen')" />
+                            <select id="filter_category" name="filter_category" x-model="category"
+                                    x-on:change="syncAttribute()"
                                     class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">{{ __('Semua kategori') }}</option>
-                                @foreach ($componentFilters as $filterKey => $meta)
-                                    <option value="{{ $filterKey }}" @selected(request('filter_key') === $filterKey)>{{ $meta['label'] }}</option>
+                                @foreach ($componentFilterTree as $cat => $group)
+                                    <option value="{{ $cat }}" @selected(request('filter_category') === $cat)>{{ $group['label'] }}</option>
                                 @endforeach
                             </select>
                         </div>
 
-                        <div>
-                            <x-input-label for="component_value" :value="__('Nilai')" />
-                            {{-- Semua opsi dirender, disaring dengan :hidden.
-                                 `<template x-for>` di dalam <select> tidak didukung browser. --}}
-                            <select id="component_value" name="component_value" x-model="selected"
-                                    x-bind:disabled="! key"
-                                    class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-400">
-                                <option value="">{{ __('Semua nilai') }}</option>
-                                @foreach ($componentFilters as $filterKey => $meta)
-                                    @foreach ($meta['values'] as $value)
-                                        <option value="{{ $value }}"
-                                                :hidden="key !== @js($filterKey)"
-                                                @selected(request('filter_key') === $filterKey && request('component_value') === $value)>
-                                            {{ $value }}
+                        {{-- Hanya untuk kategori dengan >1 atribut (Storage). --}}
+                        <div x-show="multi" x-cloak>
+                            <x-input-label for="filter_attribute" :value="__('Atribut')" />
+                            <select id="filter_attribute" name="filter_attribute" x-model="attribute"
+                                    x-on:change="selected = ''"
+                                    class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">{{ __('Semua atribut') }}</option>
+                                @foreach ($componentFilterTree as $cat => $group)
+                                    @foreach ($group['attributes'] as $attr => $meta)
+                                        <option value="{{ $attr }}"
+                                                :hidden="category !== @js($cat)"
+                                                @selected(request('filter_category') === $cat && request('filter_attribute') === $attr)>
+                                            {{ $meta['label'] }}
                                         </option>
                                     @endforeach
                                 @endforeach
                             </select>
-                            <p class="mt-1 text-xs text-slate-500" x-show="! key">{{ __('Pilih kategori lebih dulu.') }}</p>
+                        </div>
+
+                        <div class="relative">
+                            <x-input-label for="component_value" :value="__('Nilai')" />
+                            <select id="component_value" name="component_value" x-model="selected"
+                                    x-bind:disabled="! category || (multi && ! attribute)"
+                                    class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-400">
+                                <option value="">{{ __('Semua nilai') }}</option>
+                                @foreach ($componentFilterTree as $cat => $group)
+                                    @foreach ($group['attributes'] as $attr => $meta)
+                                        @foreach ($meta['values'] as $value)
+                                            <option value="{{ $value }}"
+                                                    :hidden="!(category === @js($cat) && activeAttribute === @js($attr))"
+                                                    @selected(request('filter_category') === $cat && request('component_value') === $value)>
+                                                {{ $value }}
+                                            </option>
+                                        @endforeach
+                                    @endforeach
+                                @endforeach
+                            </select>
+                            <p class="absolute mt-1 whitespace-nowrap text-xs text-slate-500" x-show="! category">{{ __('Pilih kategori lebih dulu.') }}</p>
                         </div>
                     </div>
 
-<div class="flex items-end gap-2">
+                    {{-- items-end: tombol rata dengan dasar select. Teks bantuan di kolom Nilai
+                         dibuat absolute sehingga tidak menambah tinggi baris. --}}
+                    <div class="flex items-end gap-2">
                         <x-primary-button>
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -109,9 +154,9 @@
                             {{ __('Terapkan') }}
                         </x-primary-button>
 
-                        @if (request()->filled('q') || request()->filled('status') || request()->filled('type') || request()->filled('department_id') || request()->filled('component_category') || request()->filled('component_value'))
+                        @if (request()->filled('q') || request()->filled('status') || request()->filled('type') || request()->filled('department_id') || request()->filled('filter_category') || request()->filled('filter_attribute') || request()->filled('component_value'))
                             <a href="{{ route('assets.index') }}">
-                                <x-secondary-button>{{ __('Reset') }}</x-secondary-button>
+                                <x-secondary-button type="button">{{ __('Reset') }}</x-secondary-button>
                             </a>
                         @endif
                     </div>
@@ -123,22 +168,22 @@
         <x-card :padded="false">
             @if ($assets->isEmpty())
                 <x-empty-state
-                :title="__('Belum ada aset yang cocok')"
-                :description="__('Coba ubah filter, atau tambahkan aset baru.')"
-                icon="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25">
-                @if (auth()->user()->isAdmin())
-                    <x-slot name="action">
-                        <a href="{{ route('assets.create') }}">
-                            <x-primary-button type="button">{{ __('Tambah Aset') }}</x-primary-button>
-                        </a>
-                    </x-slot>
-                @endif
-            </x-empty-state>
+                    :title="__('Belum ada aset yang cocok')"
+                    :description="__('Coba ubah filter, atau tambahkan aset baru.')"
+                    icon="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25">
+                    @if (auth()->user()->isAdmin())
+                        <x-slot name="action">
+                            <a href="{{ route('assets.create') }}">
+                                <x-primary-button type="button">{{ __('Tambah Aset') }}</x-primary-button>
+                            </a>
+                        </x-slot>
+                    @endif
+                </x-empty-state>
             @else
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200">
-                    <thead class="bg-slate-50">
-                        <tr>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
                                 <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Kode Aset') }}</th>
                                 <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Jenis') }}</th>
                                 <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Spesifikasi') }}</th>
@@ -146,15 +191,15 @@
                                 <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('IP') }}</th>
                                 <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Pengguna') }}</th>
                                 <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Status') }}</th>
-                            @if (auth()->user()->isAdmin())
-                                <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Aksi') }}</th>
-                            @endif
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @foreach ($assets as $asset)
-                            @php($holder = $asset->activeAssignment?->employee)
-                            <tr class="transition hover:bg-slate-50">
+                                @if (auth()->user()->isAdmin())
+                                    <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Aksi') }}</th>
+                                @endif
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach ($assets as $asset)
+                                @php($holder = $asset->activeAssignment?->employee)
+                                <tr class="transition hover:bg-slate-50">
                                     <td class="whitespace-nowrap px-5 py-3.5">
                                         <a href="{{ route('assets.show', $asset) }}"
                                            class="font-mono text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
@@ -177,57 +222,57 @@
                                             <div class="truncate text-slate-400">{{ $asset->osLabel() }}</div>
                                         @endif
                                     </td>
-                            <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-600">
-                                {{ $asset->mac_address }}
-                            </td>
-                            <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-600">
-                                {{ $asset->ip_address ?? '—' }}
-                            </td>
-                            <td class="whitespace-nowrap px-5 py-3.5">
-                                @if ($holder)
-                                    <div class="text-sm font-medium text-slate-900">{{ $holder->nama }}</div>
-                                    <div class="text-xs text-slate-500">{{ $holder->department->nama_dept }}</div>
-                                @elseif ($asset->department)
-                                    {{-- Aset departemen (CCTV/Printer) tanpa PIC --}}
-                                    <div class="text-sm text-slate-700">{{ $asset->department->nama_dept }}</div>
-                                    <div class="text-xs text-slate-400">{{ __('Perangkat departemen') }}</div>
-                                @else
-                                    <span class="text-sm text-slate-400">—</span>
-                                @endif
-                            </td>
-                            <td class="whitespace-nowrap px-5 py-3.5">
-                                <x-status-badge :status="$asset->status" />
-                                </td>
-                                @if (auth()->user()->isAdmin())
-                                    <td class="whitespace-nowrap px-5 py-3.5 text-right">
-                                        <div class="inline-flex items-center gap-3">
-                                            <a href="{{ route('assets.edit', $asset) }}"
-                                            class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
-                                            {{ __('Edit') }}
-                                        </a>
+                                    <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-600">
+                                        {{ $asset->mac_address }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-600">
+                                        {{ $asset->ip_address ?? '—' }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-5 py-3.5">
+                                        @if ($holder)
+                                            <div class="text-sm font-medium text-slate-900">{{ $holder->nama }}</div>
+                                            <div class="text-xs text-slate-500">{{ $holder->department->nama_dept }}</div>
+                                        @elseif ($asset->department)
+                                            {{-- Aset departemen (CCTV/Printer) tanpa PIC --}}
+                                            <div class="text-sm text-slate-700">{{ $asset->department->nama_dept }}</div>
+                                            <div class="text-xs text-slate-400">{{ __('Perangkat departemen') }}</div>
+                                        @else
+                                            <span class="text-sm text-slate-400">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap px-5 py-3.5">
+                                        <x-status-badge :status="$asset->status" />
+                                    </td>
+                                    @if (auth()->user()->isAdmin())
+                                        <td class="whitespace-nowrap px-5 py-3.5 text-right">
+                                            <div class="inline-flex items-center gap-3">
+                                                <a href="{{ route('assets.edit', $asset) }}"
+                                                   class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
+                                                    {{ __('Edit') }}
+                                                </a>
 
-                                        <form method="POST" action="{{ route('assets.destroy', $asset) }}"
+                                                <form method="POST" action="{{ route('assets.destroy', $asset) }}"
                                                       data-confirm="Hapus aset {{ $asset->asset_code }}?"
                                                       data-confirm-button="Hapus Aset">
-                                        @csrf
-                                        @method('delete')
-                                        <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">
-                                            {{ __('Hapus') }}
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        @endif
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+                                                    @csrf
+                                                    @method('delete')
+                                                    <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-800 hover:underline">
+                                                        {{ __('Hapus') }}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    @endif
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
 
-    <div class="border-t border-slate-200 p-4">
-        {{ $assets->links() }}
+                <div class="border-t border-slate-200 p-4">
+                    {{ $assets->links() }}
+                </div>
+            @endif
+        </x-card>
     </div>
-@endif
-</x-card>
-</div>
 </x-app-layout>

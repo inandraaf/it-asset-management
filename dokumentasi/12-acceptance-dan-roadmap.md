@@ -372,6 +372,9 @@ Rincian di [15-feedback-dan-tindak-lanjut.md](15-feedback-dan-tindak-lanjut.md) 
 | U2 | Kredensial dapat dilihat viewer | ✅ |
 | U3 | CCTV/Printer: sembunyikan bagian komputer, merek wajib, OS hidden di form | ✅ |
 | U4 | Satu karyawan memegang banyak aset (sudah didukung) | ✅ |
+| V1 | Filter komponen bertingkat (Kategori → Atribut → Nilai) | ✅ |
+| V2 | Dropdown Atribut hanya tampil untuk Storage | ✅ |
+| W1 | Bug spesifikasi RAM/Storage hilang saat input (duplikat `name`) | ✅ |
 
 ## 7. Risiko & Mitigasi
 
