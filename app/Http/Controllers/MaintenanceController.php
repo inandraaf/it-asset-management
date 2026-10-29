@@ -32,7 +32,7 @@ class MaintenanceController extends Controller
     public function create(): View
     {
         $assignments = AssetAssignment::with(['asset', 'employee'])->whereNull('returned_date')->get();
-        $employees = Employee::orderBy('name')->get();
+        $employees = Employee::orderBy('nama')->get();
         $components = Component::all();
         
         return view('maintenance.create', compact('assignments', 'employees', 'components'));
