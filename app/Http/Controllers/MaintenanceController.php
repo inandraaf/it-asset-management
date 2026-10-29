@@ -6,7 +6,8 @@ use App\Models\AssetMaintenance;
 use App\Models\AssetAssignment;
 use App\Models\Employee;
 use App\Models\Component;
-
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -28,11 +29,12 @@ class MaintenanceController extends Controller
         return view('maintenance.index', compact('items', 'assets', 'filterAsset'));
     }
 
-    public function create()
+    public function create(): View
     {
-        $assignments = \App\Models\AssetAssignment::with('asset')->whereNull('returned_date')->get();
-        $employees = \App\Models\Employee::all();
-        $components = \App\Models\Component::all();
+        $assignments = AssetAssignment::with(['asset', 'employee'])->whereNull('returned_date')->get();
+        $employees = Employee::orderBy('name')->get();
+        $components = Component::all();
+        
         return view('maintenance.create', compact('assignments', 'employees', 'components'));
     }
 
