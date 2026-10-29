@@ -5,7 +5,13 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-12" x-data="{
+        assignments: {{ $assignments->toJson() }},
+        selectedEmployee: '',
+        get filteredAssets() {
+            return this.assignments.filter(a => a.employee_id == this.selectedEmployee);
+        }
+    }">
         <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
             <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-slate-200">
@@ -13,11 +19,20 @@
                         @csrf
                         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <div>
-                                <label for="asset_id" class="block text-sm font-medium text-slate-700">Aset</label>
-                                <select name="asset_id" id="asset_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    @foreach($assets as $asset)
-                                        <option value="{{ $asset->id }}">{{ $asset->asset_code }}</option>
+                                <label class="block text-sm font-medium text-slate-700">Karyawan</label>
+                                <select x-model="selectedEmployee" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="">-- Pilih Karyawan --</option>
+                                    @foreach($employees as $emp)
+                                        <option value="{{ $emp->id }}">{{ $emp->name }}</option>
                                     @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="asset_id" class="block text-sm font-medium text-slate-700">Aset</label>
+                                <select name="asset_id" id="asset_id" x-model="asset_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                    <template x-for="assign in filteredAssets" :key="assign.asset_id">
+                                        <option :value="assign.asset_id" x-text="assign.asset.asset_code"></option>
+                                    </template>
                                 </select>
                             </div>
                             <div>

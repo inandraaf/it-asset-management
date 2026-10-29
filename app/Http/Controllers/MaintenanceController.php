@@ -26,12 +26,12 @@ class MaintenanceController extends Controller
         return view('maintenance.index', compact('items', 'assets', 'filterAsset'));
     }
 
-    public function create(): View
+    public function create()
     {
-        $assets = \App\Models\Asset::all();
+        $assignments = \App\Models\AssetAssignment::with('asset')->whereNull('returned_at')->get();
+        $employees = \App\Models\Employee::all();
         $components = \App\Models\Component::all();
-        $users = \App\Models\User::all();
-        return view('maintenance.create', compact('assets', 'components', 'users'));
+        return view('maintenance.create', compact('assignments', 'employees', 'components'));
     }
 
     public function store(Request $request): RedirectResponse
