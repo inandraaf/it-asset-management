@@ -23,6 +23,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->decimal('cost', 12, 2)->default(0);
             $table->foreignId('performed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('component_id')->nullable()->constrained('components')->nullOnDelete();
             $table->timestamps();
 
             $table->index('asset_id');
