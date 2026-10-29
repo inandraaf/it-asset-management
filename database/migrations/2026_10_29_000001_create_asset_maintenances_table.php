@@ -24,9 +24,9 @@ return new class extends Migration
             $table->decimal('cost', 12, 2)->default(0);
             $table->foreignId('performed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-        });
 
-        $table->index('asset_id');
+            $table->index('asset_id');
+        });
     }
 
     public function down(): void
