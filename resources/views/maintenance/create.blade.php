@@ -49,7 +49,7 @@
                                     class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     <option value="">-- Pilih Karyawan --</option>
                                     @foreach($employees as $emp)
-                                        <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                                        <option value="{{ $emp->id }}">{{ $emp->nama }}</option>
                                     @endforeach
                                 </select>
                             </div>
