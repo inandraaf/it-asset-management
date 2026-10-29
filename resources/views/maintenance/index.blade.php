@@ -32,6 +32,11 @@
                     @endif
                 </form>
             </div>
+            <div>
+                <a href="{{ route('maintenance.create') }}" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">
+                    {{ __('Tambah Maintenance') }}
+                </a>
+            </div>
         </div>
 
         <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">

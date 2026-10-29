@@ -66,6 +66,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('maintenance', [\App\Http\Controllers\MaintenanceController::class, 'index'])
         ->name('maintenance.index');
+    Route::get('maintenance/create', [\App\Http\Controllers\MaintenanceController::class, 'create'])
+        ->middleware('prevent-back-cache')
+        ->name('maintenance.create');
+    Route::post('maintenance', [\App\Http\Controllers\MaintenanceController::class, 'store'])
+        ->name('maintenance.store');
 
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->middleware('prevent-back-cache')->name('profile.edit');

@@ -16,6 +16,7 @@ class AssetMaintenance extends Model
         'description',
         'cost',
         'performed_by',
+        'component_id',
     ];
 
     protected $casts = [
@@ -31,5 +32,10 @@ class AssetMaintenance extends Model
     public function performer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'performed_by');
+    }
+
+    public function component(): BelongsTo
+    {
+        return $this->belongsTo(Component::class);
     }
 }
