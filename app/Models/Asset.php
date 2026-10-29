@@ -76,6 +76,14 @@ class Asset extends Model
     }
 
     /**
+     * Seluruh riwayat maintenance, terbaru di atas.
+     */
+    public function maintenances(): HasMany
+    {
+        return $this->hasMany(AssetMaintenance::class)->orderByDesc('performed_at');
+    }
+
+    /**
      * Assignment yang masih berjalan (pemegang saat ini).
      */
     public function activeAssignment(): HasOne
