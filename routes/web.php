@@ -64,6 +64,9 @@ Route::middleware('auth')->group(function () {
     Route::get('components/{component}', [ComponentController::class, 'show'])
         ->whereNumber('component')->name('components.show');
 
+    Route::get('maintenance', [\App\Http\Controllers\MaintenanceController::class, 'index'])
+        ->name('maintenance.index');
+
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->middleware('prevent-back-cache')->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
