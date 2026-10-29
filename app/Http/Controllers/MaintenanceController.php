@@ -22,7 +22,8 @@ class MaintenanceController extends Controller
             ->withQueryString();
 
         $assets = \App\Models\Asset::select(['id', 'asset_code', 'type'])->orderBy('asset_code')->get();
+        $filterAsset = (int) ($request->query('asset_id', 0));
 
-        return view('maintenance.index', compact('items', 'assets'));
+        return view('maintenance.index', compact('items', 'assets', 'filterAsset'));
     }
 }

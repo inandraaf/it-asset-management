@@ -7,15 +7,26 @@
     <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-3">
             <h2 class="text-lg font-semibold text-slate-900">{{ __('Pemeliharaan') }}</h2>
-            <select id="assetFilter" x-model="filterAsset" @change="reload()"
-                class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-indigo-500">
-                <option value="" {{ !$filterAsset ? 'selected' : '' }}>{{ __('Semua aset') }}</option>
-                @foreach ($assets as $a)
-                    <option value="{{ $a->id }}" {{ $filterAsset === $a->id ? 'selected' : '' }}>
-                        {{ $a->asset_code }} ({{ $a->type }})
-                    </option>
-                @endforeach
-            </select>
+            <form method="get" action="{{ route('maintenance.index') }}" class="flex items-center gap-3">
+                <label class="sr-only" for="asset_id">{{ __('Filter aset') }}</label>
+                <select id="asset_id" name="asset_id"
+                    class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-indigo-500">
+                    <option value="" {{ $filterAsset ? '' : 'selected' }}>{{ __('Semua aset') }}</option>
+                    @foreach ($assets as $a)
+                        <option value="{{ $a->id }}" {{ (int) $filterAsset === (int) $a->id ? 'selected' : '' }}>
+                            {{ $a->asset_code }} ({{ $a->type }})
+                        </option>
+                    @endforeach
+                </select>
+                <button type="submit"
+                    class="rounded-lg bg-indigo-600 px-3 py-1 text-sm font-medium text-white hover:bg-indigo-700">
+                    {{ __('Terapkan') }}
+                </button>
+                @if ($filterAsset)
+                    <a href="{{ route('maintenance.index') }}"
+                        class="text-sm text-slate-600 underline">{{ __('Reset') }}</a>
+                @endif
+            </form>
         </div>
     </div>
 
@@ -49,13 +60,4 @@
     @endif
 </div>
 
-<script setup>
-const q = new URLSearchParams(window.location.search);
-const filterAsset = q.get('asset_id') || '';
-function reload() {
-    const params = new URLSearchParams();
-    if (filterAsset) params.set('asset_id', filterAsset);
-    window.location.search = params.toString();
-}
-</script>
 @endsection
