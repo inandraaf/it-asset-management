@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssetMaintenance;
-use Illuminate\Contracts\View\View;
-use Illuminate\Http\Request;
+use App\Models\AssetAssignment;
+use App\Models\Employee;
+use App\Models\Component;
+
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -28,7 +30,7 @@ class MaintenanceController extends Controller
 
     public function create()
     {
-        $assignments = \App\Models\AssetAssignment::with('asset')->whereNull('returned_at')->get();
+        $assignments = \App\Models\AssetAssignment::with('asset')->whereNull('returned_date')->get();
         $employees = \App\Models\Employee::all();
         $components = \App\Models\Component::all();
         return view('maintenance.create', compact('assignments', 'employees', 'components'));
