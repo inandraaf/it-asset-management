@@ -10,32 +10,14 @@
             selectedEmployee: '',
             selectedAsset: '',
             selectedComponent: '',
-            assetComponents: {},
+            assetComponents: @json($assetComponents),
             filteredAssets: [],
-            init() {
-                this.assetComponents = @json({{
-                    $assignments->groupBy('asset_id')->mapWithKeys(function ($group, $assetId) {
-                        return [$assetId => $group->map(function ($a) {
-                            return [
-                                'asset_id' => $a->asset_id,
-                                'employee_id' => $a->employee_id,
-                                'asset_code' => $a->asset->asset_code,
-                                'components' => ($a->component_installations ?? [])->map(fn($ci) => [
-                                    'id' => $ci->component_id,
-                                    'component_code' => $ci->component->component_code ?? null,
-                                ]),
-                            ];
-                        })->first();
-                    })
-                }});
-            },
             updateFilteredAssets() {
                 this.filteredAssets = Object.values(this.assetComponents).filter(a => a.employee_id == this.selectedEmployee);
                 this.selectedAsset = '';
                 this.selectedComponent = '';
             }
         }"
-        x-init="init()"
         x-cloak>
         <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
             <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
@@ -45,8 +27,8 @@
                         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <div>
                                 <label class="block text-sm font-medium text-slate-700">Karyawan</label>
-                                <select x-model="selectedEmployee" @change="updateFilteredAssets()"
-                                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <input type="hidden" name="employee_id" :value="selectedEmployee" />
+
                                     <option value="">-- Pilih Karyawan --</option>
                                     @foreach($employees as $emp)
                                         <option value="{{ $emp->id }}">{{ $emp->nama }}</option>
